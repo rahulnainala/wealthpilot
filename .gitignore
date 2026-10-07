@@ -46,3 +46,7 @@ compile_commands.json
 
 # --- Personal knowledge (your own plan; read by the AI, never committed) ---
 docs/knowledge/portfolio/
+
+# --- Vercel CLI (project link + local OIDC token) ---
+.vercel/
+.env*.local
