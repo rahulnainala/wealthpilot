@@ -20,8 +20,8 @@ import { Button } from "@/components/ui/button";
 import { useApi } from "@/hooks/useApi";
 import { api, authHeader } from "@/lib/api";
 import { useChatStore } from "@/store/useChatStore";
+import { API_BASE } from "@/lib/config";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 function ChartVision() {
   const [result, setResult] = useState<string | null>(null);

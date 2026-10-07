@@ -20,6 +20,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
 import { dateOnly, istTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { API_BASE } from "@/lib/config";
 
 const TARGET = 1000;
 const POLL_MS = 10_000;
@@ -321,7 +322,7 @@ export function LearnTab() {
         >
           <TrainingGauge value={status.training_pairs} live={climbing} />
           <a
-            href={`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/api/ai/training-data`}
+            href={`${API_BASE}/api/ai/training-data`}
             target="_blank"
             rel="noreferrer"
             className="mx-auto mt-1 flex w-fit items-center gap-1.5 text-xs font-medium text-primary hover:underline"

@@ -67,7 +67,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with get_sessionmaker()() as db:
         await seed_goals(db)
     start_scheduler()
-    if settings.enable_scheduler:
+    if settings.demo_mode:
+        # Serverless demo: no scheduler, and the snapshot has to exist before the
+        # first request, so build it from the fixtures inline.
+        await _run_startup_catchup_safely()
+    elif settings.enable_scheduler:
         asyncio.create_task(_run_startup_catchup_safely())
     yield
     stop_scheduler()

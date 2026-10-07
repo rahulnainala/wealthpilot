@@ -12,8 +12,8 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useApi } from "@/hooks/useApi";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { API_BASE } from "@/lib/config";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 function Stat({ label, value, tip }: { label: string; value: string; tip: string }) {
   return (

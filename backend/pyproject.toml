@@ -23,6 +23,7 @@ dependencies = [
     "fpdf2>=2.8,<3.0",
     "pypdf>=5.0,<6.0",
     "python-multipart>=0.0.12,<1.0",
+    "aiosqlite>=0.20,<1.0",  # SQLite for the serverless demo and the tests
 ]
 
 [project.optional-dependencies]
@@ -32,7 +33,6 @@ dev = [
     "pytest>=8.3,<9.0",
     "pytest-asyncio>=0.24,<1.0",
     "pytest-cov>=5.0,<6.0",
-    "aiosqlite>=0.20,<1.0",
 ]
 
 [tool.ruff]

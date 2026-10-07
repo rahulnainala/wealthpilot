@@ -11,7 +11,7 @@ export function useTicks(enabled = true): void {
   const setStreamStatus = useTickerStore((s) => s.setStreamStatus);
 
   useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled || WS_BASE === null || typeof window === "undefined") return;
 
     let socket: WebSocket | null = null;
     let closedByUs = false;
