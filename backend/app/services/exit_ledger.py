@@ -14,8 +14,8 @@ to log each sale by hand — is exactly the bookkeeping the plan already fails a
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from datetime import date as date_
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from app.domain.enums import HoldingType, SnapshotStatus
 from app.models.realized_exit import RealizedExit
-from app.models.snapshot import Snapshot, SnapshotHolding
+from app.models.snapshot import Snapshot
 from app.services.analytics_service import as_utc, ist_date
 
 #: Quantity tolerance — share counts are whole or near-whole, so anything below
@@ -170,7 +170,7 @@ async def mark_deployed(
     row = await db.get(RealizedExit, exit_id)
     if row is None:
         return None
-    row.deployed_at = datetime.now(timezone.utc) if deployed else None
+    row.deployed_at = datetime.now(UTC) if deployed else None
     await db.commit()
     await db.refresh(row)
     return row

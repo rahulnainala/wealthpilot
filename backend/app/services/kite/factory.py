@@ -9,6 +9,7 @@ from app.services.kite.cached import CachedKiteService
 from app.services.kite.mock import MockKiteService
 from app.services.kite.real import KiteService
 
+
 # Process-wide cache shared across all requests (survives per-request service
 # construction), so the TTL genuinely rate-limits upstream Kite calls. Redis
 # when configured (shared, restart-surviving); in-process otherwise.

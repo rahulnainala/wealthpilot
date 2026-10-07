@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import quote_plus
 from xml.etree import ElementTree as ET
 
@@ -32,7 +33,7 @@ class Headline:
     sentiment: float = 0.0
 
 
-async def _fetch(query: str, k: int) -> list[dict]:
+async def _fetch(query: str, k: int) -> list[dict[str, Any]]:
     url = _RSS.format(q=quote_plus(f"{query} stock India"))
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT_S, follow_redirects=True) as client:
@@ -42,7 +43,7 @@ async def _fetch(query: str, k: int) -> list[dict]:
     except (httpx.HTTPError, ET.ParseError) as exc:
         logger.info("news fetch skipped (%s)", exc)
         return []
-    out: list[dict] = []
+    out: list[dict[str, Any]] = []
     for item in list(root.iterfind(".//item"))[:k]:
         title = (item.findtext("title") or "").strip()
         source = (item.findtext("source") or "").strip()
@@ -59,7 +60,7 @@ async def get_headlines(query: str, k: int = 5) -> list[Headline]:
         return []
     key = f"ai:news:{query.lower()}:{k}"
 
-    async def _factory() -> list[dict]:
+    async def _factory() -> list[dict[str, Any]]:
         return await _fetch(query, k)
 
     rows = await get_shared_cache().get_or_set(key, float(_TTL_S), _factory)

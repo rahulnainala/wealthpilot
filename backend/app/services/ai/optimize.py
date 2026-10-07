@@ -12,6 +12,7 @@ never an executed trade.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,9 +27,9 @@ from app.services.goal_simulation import (
 @dataclass(frozen=True)
 class OptimizeResult:
     method: str
-    current: list[dict]        # {"asset_class", "weight", "value"}
-    target: list[dict]         # {"asset_class", "weight"}
-    rebalance: list[dict]      # {"asset_class", "delta_weight", "delta_amount"}
+    current: list[dict[str, Any]]        # {"asset_class", "weight", "value"}
+    target: list[dict[str, Any]]         # {"asset_class", "weight"}
+    rebalance: list[dict[str, Any]]      # {"asset_class", "delta_weight", "delta_amount"}
     current_vol_est: float     # weighted-avg volatility proxy (%)
     target_vol_est: float
 

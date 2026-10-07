@@ -9,13 +9,14 @@ temper confidence. All read-only; degrades to "unknown" rather than failing.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.enums import SnapshotStatus
 from app.models.knowledge import KnowledgeChunk
-from app.models.snapshot import Snapshot, SnapshotStatus
+from app.models.snapshot import Snapshot
 
 _STALE_HOURS = 30.0  # a weekday snapshot older than this reads as stale
 
@@ -44,8 +45,8 @@ async def data_health(db: AsyncSession) -> DataHealth:
         reasons.append("No portfolio snapshot yet.")
     else:
         if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
-        age_h = round((datetime.now(timezone.utc) - created).total_seconds() / 3600, 1)
+            created = created.replace(tzinfo=UTC)
+        age_h = round((datetime.now(UTC) - created).total_seconds() / 3600, 1)
         if age_h > _STALE_HOURS:
             reasons.append(
                 f"Latest snapshot is {age_h:.0f}h old — the Kite session may have expired."

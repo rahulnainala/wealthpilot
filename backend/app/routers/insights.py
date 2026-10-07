@@ -5,7 +5,9 @@ benchmark, weekly-review, monthly-report. See docs/AI_ROADMAP.md.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Any
+
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 from app.dependencies import DbSession, RiskDep
@@ -28,7 +30,7 @@ async def ai_brief(db: DbSession, risk: RiskDep, refresh: bool = False) -> Brief
 
 
 @router.get("/hedge")
-async def ai_hedge(db: DbSession, protect_pct: float = 0.10) -> dict | None:
+async def ai_hedge(db: DbSession, protect_pct: float = 0.10) -> dict[str, Any] | None:
     """Phase 51: protective-put hedge sizing (heuristic estimate)."""
     from app.services.ai.options import hedge_analysis
 
@@ -36,7 +38,7 @@ async def ai_hedge(db: DbSession, protect_pct: float = 0.10) -> dict | None:
 
 
 @router.get("/forecast")
-async def ai_forecast(db: DbSession) -> dict | None:
+async def ai_forecast(db: DbSession) -> dict[str, Any] | None:
     """Phase 46: EWMA volatility forecast + momentum (not a price prediction)."""
     import dataclasses
 
@@ -47,7 +49,7 @@ async def ai_forecast(db: DbSession) -> dict | None:
 
 
 @router.get("/factors")
-async def ai_factors(db: DbSession) -> dict:
+async def ai_factors(db: DbSession) -> dict[str, Any]:
     """Phase 55: heuristic value/momentum/quality/size factor tilts."""
     from app.services.ai.factors import factor_exposure
 
@@ -55,7 +57,7 @@ async def ai_factors(db: DbSession) -> dict:
 
 
 @router.get("/dividends")
-async def ai_dividends(db: DbSession) -> dict | None:
+async def ai_dividends(db: DbSession) -> dict[str, Any] | None:
     """Phase 34: dividend income forecast (assumed yield, labelled)."""
     from app.services.ai.dividends import dividend_forecast
 
@@ -63,7 +65,7 @@ async def ai_dividends(db: DbSession) -> dict | None:
 
 
 @router.get("/xray")
-async def ai_xray(db: DbSession) -> dict | None:
+async def ai_xray(db: DbSession) -> dict[str, Any] | None:
     """Phase 33: asset-class look-through (direct vs via-funds)."""
     from app.services.ai.xray import portfolio_xray
 
@@ -71,7 +73,7 @@ async def ai_xray(db: DbSession) -> dict | None:
 
 
 @router.get("/stress")
-async def ai_stress(db: DbSession, scenario: str = "market") -> dict | None:
+async def ai_stress(db: DbSession, scenario: str = "market") -> dict[str, Any] | None:
     """Phase 32: sector-aware stress scenario (energy|market|rates|gold)."""
     from app.services.ai.stress import run_stress
 
@@ -207,11 +209,9 @@ async def ai_fi_plan(
 
 
 @router.get("/monthly-report")
-async def ai_monthly_report(db: DbSession, risk: RiskDep):
+async def ai_monthly_report(db: DbSession, risk: RiskDep) -> Response:
     """Phase 22: on-demand monthly PDF statement."""
     from datetime import date
-
-    from fastapi import Response
 
     from app.services.ai.report import monthly_report_pdf
 
@@ -249,7 +249,7 @@ class TaxSummaryRead(BaseModel):
     total_unrealized_gain: float
     est_ltcg_tax: float
     est_stcg_tax: float
-    harvest_candidates: list[dict]
+    harvest_candidates: list[dict[str, Any]]
     note: str
 
 
@@ -269,9 +269,9 @@ async def ai_tax_summary(db: DbSession) -> TaxSummaryRead | None:
 
 class OptimizeRead(BaseModel):
     method: str
-    current: list[dict]
-    target: list[dict]
-    rebalance: list[dict]
+    current: list[dict[str, Any]]
+    target: list[dict[str, Any]]
+    rebalance: list[dict[str, Any]]
     current_vol_est: float
     target_vol_est: float
 

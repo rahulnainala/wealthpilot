@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import date
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -149,7 +150,7 @@ def _months_until(target: date, today: date | None = None) -> int:
 
 
 def _build_sleeves(
-    holdings: list, cash: float, post_selloff: bool
+    holdings: list[Any], cash: float, post_selloff: bool
 ) -> list[Sleeve] | None:
     """Aggregate holdings into return-assumption sleeves.
 

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from typing import Any
+
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.dependencies import DbSession, RiskDep
@@ -88,7 +92,7 @@ async def ai_chat(req: ChatRequest, db: DbSession, risk: RiskDep) -> ChatRespons
 
 
 @router.get("/training-data")
-async def training_data(db: DbSession, grounded: bool = True) -> list[dict]:
+async def training_data(db: DbSession, grounded: bool = True) -> list[dict[str, Any]]:
     """Accumulated Q&A pairs in chat-tuning shape (LoRA input).
 
     Phase 25: with grounded=true (default) each example is prefixed with the
@@ -104,9 +108,12 @@ async def training_data(db: DbSession, grounded: bool = True) -> list[dict]:
     from app.services.ai.chat_service import _SYSTEM
 
     rows = (await db.execute(select(ChatExchange).order_by(ChatExchange.id))).scalars()
-    out: list[dict] = []
+    out: list[dict[str, Any]] = []
     for r in rows:
-        messages = [{"role": "user", "content": r.question}, {"role": "assistant", "content": r.reply}]
+        messages = [
+            {"role": "user", "content": r.question},
+            {"role": "assistant", "content": r.reply},
+        ]
         if grounded:
             messages.insert(0, {"role": "system", "content": _SYSTEM})
         out.append(
@@ -119,23 +126,25 @@ async def training_data(db: DbSession, grounded: bool = True) -> list[dict]:
 
 
 @router.post("/chat/stream")
-async def ai_chat_stream(req: ChatRequest, db: DbSession, risk: RiskDep):
+async def ai_chat_stream(req: ChatRequest, db: DbSession, risk: RiskDep) -> StreamingResponse:
     """SSE token stream (Ollama only). Events: phase, token, final, done, error."""
-    from fastapi.responses import StreamingResponse
-
     from app.config import get_settings
     from app.services.ai.chat_service import stream_chat_ollama
     from app.services.ai.providers import _ollama_reachable
 
     settings = get_settings()
 
-    async def gen():
+    async def gen() -> AsyncIterator[str]:
         if not settings.ollama_url or not await _ollama_reachable(settings.ollama_url):
             yield "event: error\ndata: unconfigured\n\n"
             return
         try:
             async for kind, payload in stream_chat_ollama(
-                req.message, [t.model_dump() for t in req.history[-10:]], db, risk, screen=req.screen
+                req.message,
+                [t.model_dump() for t in req.history[-10:]],
+                db,
+                risk,
+                screen=req.screen,
             ):
                 data = payload.replace("\n", "\\n")
                 yield f"event: {kind}\ndata: {data}\n\n"

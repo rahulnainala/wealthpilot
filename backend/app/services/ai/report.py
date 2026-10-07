@@ -137,6 +137,9 @@ async def monthly_report_pdf(db: AsyncSession, risk_client: BaseRiskClient) -> b
     pdf.ln(6)
     pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(120, 120, 120)
-    line("Informational analysis, not licensed financial advice. Figures from your latest snapshot.")
+    line(
+        "Informational analysis, not licensed financial advice. "
+        "Figures from your latest snapshot."
+    )
 
     return bytes(pdf.output())

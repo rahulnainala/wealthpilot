@@ -7,6 +7,8 @@ from the latest snapshot — the model picks the chart, the data stays real.
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.analytics_service import latest_holding_views
@@ -15,7 +17,7 @@ from app.services.goal_simulation import _sleeve_class
 KINDS = ("allocation", "holdings", "pnl")
 
 
-async def build_chart(db: AsyncSession, kind: str) -> dict | None:
+async def build_chart(db: AsyncSession, kind: str) -> dict[str, Any] | None:
     data = await latest_holding_views(db)
     if data is None:
         return None

@@ -54,7 +54,8 @@ def _clean_followup(candidate: str) -> str | None:
         before = q
         q = q.lstrip("-*•—–#> ").strip()
         q = re.sub(r"^\d+[.)]\s*", "", q)  # "1. " / "2) " list markers
-        q = re.sub(r"^\**\s*follow[- ]?up\s*\d*\s*:?\**\s*", "", q, flags=re.IGNORECASE)  # "Follow-up 3:"
+        # "Follow-up 3:"
+        q = re.sub(r"^\**\s*follow[- ]?up\s*\d*\s*:?\**\s*", "", q, flags=re.IGNORECASE)
         # Template label: punctuation-separated ("Q3:", "q2)", "q1 | ") strips in either
         # case; a bare space-separated one ("q3 Are…") only lowercase, so a legit
         # "Q4 earnings…" quarter reference survives.

@@ -8,7 +8,9 @@ result is cached to avoid hammering.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,14 +25,12 @@ _UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 _TTL_S = 6 * 3600
 
 
-async def _fetch(symbols: list[str]) -> list[dict]:
-    out: list[dict] = []
+async def _fetch(symbols: list[str]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
     try:
         async with httpx.AsyncClient(timeout=8.0, headers=_UA, follow_redirects=True) as c:
-            try:
+            with contextlib.suppress(httpx.HTTPError):
                 await c.get("https://fc.yahoo.com/")
-            except httpx.HTTPError:
-                pass
             crumb = (await c.get("https://query1.finance.yahoo.com/v1/test/getcrumb")).text
             if not crumb or len(crumb) > 40:
                 return []
@@ -56,7 +56,7 @@ async def _fetch(symbols: list[str]) -> list[dict]:
     return out
 
 
-async def earnings_calendar(db: AsyncSession) -> list[dict]:
+async def earnings_calendar(db: AsyncSession) -> list[dict[str, Any]]:
     data = await latest_holding_views(db)
     if data is None:
         return []
@@ -64,7 +64,7 @@ async def earnings_calendar(db: AsyncSession) -> list[dict]:
     if not symbols:
         return []
 
-    async def _factory() -> list[dict]:
+    async def _factory() -> list[dict[str, Any]]:
         return await _fetch(symbols)
 
     return await get_shared_cache().get_or_set("ai:earnings", _TTL_S, _factory)

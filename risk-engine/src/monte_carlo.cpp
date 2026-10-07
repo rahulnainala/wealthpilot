@@ -444,8 +444,7 @@ RetirementPlanResult RunRetirementPlan(const RetirementPlanInput& input) {
         const double withdrawal =
             accumulating
                 ? 0.0
-                : std::min(total_before,
-                           ScheduleAt(input.withdrawal_schedule, m - accum, 0.0));
+                : std::min(total_before, ScheduleAt(input.withdrawal_schedule, m - accum, 0.0));
         const double contribution =
             accumulating ? ScheduleAt(input.contribution_schedule, m, input.monthly_contribution)
                          : 0.0;
@@ -496,9 +495,9 @@ RetirementPlanResult RunRetirementPlan(const RetirementPlanInput& input) {
     for (auto& th : threads) th.join();
   }
 
-  const auto hits = static_cast<double>(
-      std::count_if(corpus_at_retirement.begin(), corpus_at_retirement.end(),
-                    [&](double v) { return v >= input.target_value; }));
+  const auto hits =
+      static_cast<double>(std::count_if(corpus_at_retirement.begin(), corpus_at_retirement.end(),
+                                        [&](double v) { return v >= input.target_value; }));
   result.probability_of_success = hits / static_cast<double>(paths);
 
   std::vector<double> sorted_corpus = corpus_at_retirement;

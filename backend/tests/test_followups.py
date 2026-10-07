@@ -81,7 +81,10 @@ def test_placeholder_only_drops_trailer_entirely():
 
 
 def test_already_clean_is_idempotent():
-    raw = "My VaR is 3.2%.\n\nFOLLOW-UPS: Why did it rise? | Which holding drives it? | Should I hedge?"
+    raw = (
+        "My VaR is 3.2%.\n\n"
+        "FOLLOW-UPS: Why did it rise? | Which holding drives it? | Should I hedge?"
+    )
     assert normalize_followups(raw) == raw
 
 

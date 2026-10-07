@@ -8,13 +8,15 @@ inform, not a live quote.
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _NIFTY_LOT = 50
 _PREMIUM_PCT = 0.015  # ~1.5% for a ~1-month, mildly-OTM index put (rule of thumb)
 
 
-async def hedge_analysis(db: AsyncSession, protect_pct: float = 0.10) -> dict | None:
+async def hedge_analysis(db: AsyncSession, protect_pct: float = 0.10) -> dict[str, Any] | None:
     from app.services.ai.xray import portfolio_xray
     from app.services.market import build_market_data_provider
 

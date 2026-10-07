@@ -261,3 +261,7 @@ _Add captures of the Overview, Goals (Simulate panel), and Market tabs here._
 | Overview | Goals — Simulate | Market |
 |---|---|---|
 | _`docs/overview.png`_ | _`docs/goals.png`_ | _`docs/market.png`_ |
+
+## License
+
+[MIT](LICENSE) © 2026 Rahul Nainala

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +27,7 @@ _INDICATORS = [
 _TTL_S = 600.0
 
 
-async def _quote(client: httpx.AsyncClient, symbol: str) -> dict | None:
+async def _quote(client: httpx.AsyncClient, symbol: str) -> dict[str, Any] | None:
     try:
         resp = await client.get(
             f"/v8/finance/chart/{symbol}", params={"interval": "1d", "range": "1d"}
@@ -43,13 +44,13 @@ async def _quote(client: httpx.AsyncClient, symbol: str) -> dict | None:
     return {"price": round(float(price), 2), "change_pct": round((price - prev) / prev * 100, 2)}
 
 
-async def _fetch_all() -> list[dict]:
+async def _fetch_all() -> list[dict[str, Any]]:
     async with httpx.AsyncClient(
         base_url="https://query1.finance.yahoo.com", timeout=8.0,
         headers={"User-Agent": "Mozilla/5.0"},
     ) as client:
         results = await asyncio.gather(*(_quote(client, sym) for _n, sym in _INDICATORS))
-    out: list[dict] = []
+    out: list[dict[str, Any]] = []
     for (name, sym), q in zip(_INDICATORS, results, strict=True):
         if q is not None:
             out.append({"name": name, "symbol": sym, **q})
@@ -57,8 +58,8 @@ async def _fetch_all() -> list[dict]:
 
 
 async def _energy_exposure_pct(db: AsyncSession) -> float:
-    from app.services.analytics_service import latest_holding_views
     from app.services.ai.stress import _sector
+    from app.services.analytics_service import latest_holding_views
 
     data = await latest_holding_views(db)
     if data is None:
@@ -71,7 +72,7 @@ async def _energy_exposure_pct(db: AsyncSession) -> float:
     return round(energy / total * 100, 1)
 
 
-async def macro_dashboard(db: AsyncSession) -> dict:
+async def macro_dashboard(db: AsyncSession) -> dict[str, Any]:
     indicators = await get_shared_cache().get_or_set("ai:macro", _TTL_S, _fetch_all)
     energy = await _energy_exposure_pct(db)
     return {

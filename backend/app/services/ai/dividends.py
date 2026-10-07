@@ -8,6 +8,8 @@ Reports annual + monthly-average income for a rough cash-flow view.
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import Bucket
@@ -16,13 +18,13 @@ from app.services.analytics_service import latest_holding_views
 _ASSUMED_YIELD = 0.055  # blended assumption for the dividend bucket
 
 
-async def dividend_forecast(db: AsyncSession) -> dict | None:
+async def dividend_forecast(db: AsyncSession) -> dict[str, Any] | None:
     data = await latest_holding_views(db)
     if data is None:
         return None
     holdings, _cash = data
 
-    items = [
+    items: list[dict[str, Any]] = [
         {
             "symbol": h.symbol,
             "annual": round(h.value * _ASSUMED_YIELD, 2),

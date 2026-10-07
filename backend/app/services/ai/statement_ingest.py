@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import logging
+from typing import Any
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,13 +33,16 @@ def _extract_text(pdf_bytes: bytes, password: str | None) -> str:
 
 async def ingest_statement(
     db: AsyncSession, filename: str, pdf_bytes: bytes, password: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     """Parse a statement PDF to text and (re)ingest it into the knowledge base."""
     try:
         text = _extract_text(pdf_bytes, password)
     except Exception as exc:  # noqa: BLE001 — surface a clean message, don't 500
         logger.info("statement parse failed: %s", exc)
-        return {"error": "Could not read the PDF (wrong password or unsupported format).", "chunks_added": 0}
+        return {
+            "error": "Could not read the PDF (wrong password or unsupported format).",
+            "chunks_added": 0,
+        }
     if not text:
         return {"error": "No extractable text — the PDF may be a scanned image.", "chunks_added": 0}
 

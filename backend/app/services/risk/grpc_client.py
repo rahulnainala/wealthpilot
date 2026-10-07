@@ -22,7 +22,6 @@ from app.services.risk.base import (
     Sleeve,
 )
 
-
 # Per-RPC deadlines: without them, an unreachable engine hangs the API request
 # path for gRPC's full connect-backoff (observed ~10s) before failing.
 _HEALTH_TIMEOUT_S = 2.0

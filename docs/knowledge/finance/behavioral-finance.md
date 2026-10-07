@@ -23,7 +23,7 @@ Overconfidence and action bias: trading more correlates with earning less
 INACTION with confidence — most days the right move is nothing.
 
 Herding and FOMO: crypto 2021, smallcaps 2017/2024 — inflows peak at tops.
-A pre-committed plan (65/25/10 split, bucket routing) is the antidote;
+A pre-committed plan (a fixed SIP split, bucket routing) is the antidote;
 deviations require writing down a reason first.
 
 Mental accounting: money is fungible, but bucket structures exploit this

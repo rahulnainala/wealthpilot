@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import CursorResult, select
 from sqlalchemy import delete as sql_delete
-from sqlalchemy import select
 
 from app.dependencies import DbSession
 from app.models.external_asset import ExternalAsset
@@ -51,7 +52,7 @@ async def list_assets(db: DbSession) -> list[AssetRead]:
 
 
 @router.get("/networth")
-async def net_worth(db: DbSession) -> dict:
+async def net_worth(db: DbSession) -> dict[str, Any]:
     """Net worth = Zerodha portfolio + external assets - liabilities.
 
     The subtraction is the point. This endpoint previously returned
@@ -104,8 +105,9 @@ async def create_liability(payload: LiabilityCreate, db: DbSession) -> Liability
 
 @router.delete("/liabilities/{liability_id}", status_code=204)
 async def delete_liability(liability_id: int, db: DbSession) -> None:
-    result = await db.execute(
-        sql_delete(Liability).where(Liability.id == liability_id)
+    result = cast(
+        "CursorResult[Any]",
+        await db.execute(sql_delete(Liability).where(Liability.id == liability_id)),
     )
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Liability not found")
@@ -123,7 +125,10 @@ async def add_asset(payload: AssetCreate, db: DbSession) -> AssetRead:
 
 @router.delete("/{asset_id}")
 async def delete_asset(asset_id: int, db: DbSession) -> dict[str, str]:
-    res = await db.execute(sql_delete(ExternalAsset).where(ExternalAsset.id == asset_id))
+    res = cast(
+        "CursorResult[Any]",
+        await db.execute(sql_delete(ExternalAsset).where(ExternalAsset.id == asset_id)),
+    )
     await db.commit()
     if res.rowcount == 0:
         raise HTTPException(status_code=404, detail="not_found")

@@ -10,6 +10,7 @@ are estimates to inform the owner, not tax advice.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +39,7 @@ class TaxSummary:
     total_unrealized_gain: float
     est_ltcg_tax: float          # if all gains realized this FY, long-term
     est_stcg_tax: float          # short-term alternative
-    harvest_candidates: list[dict]  # {"symbol", "loss"} — losers that can offset
+    harvest_candidates: list[dict[str, Any]]  # {"symbol", "loss"} — losers that can offset
     note: str
 
 
@@ -50,10 +51,10 @@ async def tax_summary(db: AsyncSession) -> TaxSummary | None:
     holdings, _cash = data
     stocks = [h for h in holdings if h.type == HoldingType.STOCK]
     gains = sum(h.pnl for h in stocks if h.pnl > 0)
-    harvest = sorted(
-        ({"symbol": h.symbol, "loss": round(h.pnl, 2)} for h in stocks if h.pnl < 0),
-        key=lambda x: x["loss"],
-    )
+    harvest = [
+        {"symbol": h.symbol, "loss": round(h.pnl, 2)}
+        for h in sorted((h for h in stocks if h.pnl < 0), key=lambda h: h.pnl)
+    ]
     return TaxSummary(
         total_unrealized_gain=round(gains, 2),
         est_ltcg_tax=estimate_ltcg_tax(gains),

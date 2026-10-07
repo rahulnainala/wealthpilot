@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +32,7 @@ def _fund(invested: float, units: float) -> SnapshotHolding:
 
 async def _history(db: AsyncSession, points: list[tuple[int, float]]) -> None:
     """Persist OK snapshots as (days_ago, invested) pairs."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for days_ago, invested in points:
         db.add(
             Snapshot(
@@ -110,7 +110,7 @@ async def test_flat_history_reports_zero_not_none(db_session: AsyncSession) -> N
 async def test_health_flags_failures_since_the_last_good_snapshot(
     client, db_session: AsyncSession
 ) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     db_session.add(
         Snapshot(
             ts=now - timedelta(days=3),

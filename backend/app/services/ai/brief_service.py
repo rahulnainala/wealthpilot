@@ -26,7 +26,8 @@ from app.services.risk import BaseRiskClient
 logger = logging.getLogger("wealthpilot.ai")
 
 _SYSTEM = (
-    "You are Pilot, the owner's portfolio copilot. In first person, write a 4-6 sentence morning brief for the "
+    "You are Pilot, the owner's portfolio copilot. In first person, write a 4-6 "
+    "sentence morning brief for the "
     "portfolio owner. When a Yesterday block is provided, LEAD with what changed "
     "since yesterday. Use ONLY the numbers provided — never invent figures. "
     "Plain language, specific, calm; mention the single most actionable item "

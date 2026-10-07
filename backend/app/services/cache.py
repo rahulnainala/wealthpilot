@@ -13,7 +13,7 @@ import asyncio
 import pickle
 import time
 from collections.abc import Awaitable, Callable
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -80,7 +80,7 @@ class RedisTTLCache:
     def __init__(self, url: str) -> None:
         import redis.asyncio as aioredis
 
-        self._redis = aioredis.from_url(url)
+        self._redis = aioredis.Redis.from_url(url)
         self._locks: dict[str, asyncio.Lock] = {}
 
     def _lock_for(self, key: str) -> asyncio.Lock:
@@ -92,12 +92,12 @@ class RedisTTLCache:
         rkey = self._PREFIX + key
         raw = await self._redis.get(rkey)
         if raw is not None:
-            return pickle.loads(raw)  # noqa: S301 — self-written cache data
+            return cast(T, pickle.loads(raw))  # noqa: S301 — self-written cache data
 
         async with self._lock_for(key):
             raw = await self._redis.get(rkey)
             if raw is not None:
-                return pickle.loads(raw)  # noqa: S301
+                return cast(T, pickle.loads(raw))  # noqa: S301
             value = await factory()
             await self._redis.set(rkey, pickle.dumps(value), px=int(ttl * 1000))
             return value
@@ -150,7 +150,7 @@ class PgTTLCache:
     def _lock_for(self, key: str) -> asyncio.Lock:
         return self._locks.setdefault(key, asyncio.Lock())
 
-    async def _get_raw(self, key: str):
+    async def _get_raw(self, key: str) -> bytes | None:
         from sqlalchemy import text
 
         from app.db import get_sessionmaker
@@ -172,12 +172,12 @@ class PgTTLCache:
     ) -> T:
         raw = await self._get_raw(key)
         if raw is not None:
-            return pickle.loads(raw)  # noqa: S301 — self-written cache data
+            return cast(T, pickle.loads(raw))  # noqa: S301 — self-written cache data
 
         async with self._lock_for(key):
             raw = await self._get_raw(key)
             if raw is not None:
-                return pickle.loads(raw)  # noqa: S301
+                return cast(T, pickle.loads(raw))  # noqa: S301
             value = await factory()
             from sqlalchemy import text
 

@@ -10,11 +10,13 @@ figures come from the latest snapshot.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.snapshot import Snapshot, SnapshotHolding, SnapshotStatus
+from app.domain.enums import SnapshotStatus
+from app.models.snapshot import Snapshot, SnapshotHolding
 
 SELL_THRESHOLD = 1.10  # the +10% target
 # Proceeds split (mirrors frontend PROCEEDS_SPLIT: Travel/Vehicle/Emergency).
@@ -31,7 +33,7 @@ class OrderDraft:
     threshold_met: bool
     gain: float = 0.0
     est_ltcg_tax: float = 0.0
-    routing: list[dict] = field(default_factory=list)
+    routing: list[dict[str, Any]] = field(default_factory=list[Any])
     note: str = ""
 
 

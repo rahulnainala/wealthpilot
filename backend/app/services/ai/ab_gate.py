@@ -9,7 +9,8 @@ for the Learn tab.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +48,7 @@ async def run_ab(candidate: str, base: str) -> None:
                     else f"{base} scores higher ({b_score} vs {c_score}) — consider reverting "
                     f"OLLAMA_MODEL to {base}."
                 ),
-                "at": datetime.now(timezone.utc).isoformat(),
+                "at": datetime.now(UTC).isoformat(),
             }
             row = (
                 await db.execute(select(Setting).where(Setting.key == _AB_KEY))
@@ -61,6 +62,6 @@ async def run_ab(candidate: str, base: str) -> None:
         await risk.close()
 
 
-async def get_ab_result(db: AsyncSession) -> dict:
+async def get_ab_result(db: AsyncSession) -> dict[str, Any]:
     row = (await db.execute(select(Setting).where(Setting.key == _AB_KEY))).scalar_one_or_none()
     return row.value if row and isinstance(row.value, dict) else {}

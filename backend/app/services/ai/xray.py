@@ -8,6 +8,8 @@ exists — but it reveals the real exposure behind the funds.
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import HoldingType
@@ -15,7 +17,7 @@ from app.services.analytics_service import latest_holding_views
 from app.services.goal_simulation import _sleeve_class
 
 
-async def portfolio_xray(db: AsyncSession) -> dict | None:
+async def portfolio_xray(db: AsyncSession) -> dict[str, Any] | None:
     data = await latest_holding_views(db)
     if data is None:
         return None
@@ -32,7 +34,7 @@ async def portfolio_xray(db: AsyncSession) -> dict | None:
     if cash:
         buckets.setdefault("cash", {"direct": 0.0, "fund": 0.0})["direct"] += cash
 
-    classes = [
+    classes: list[dict[str, Any]] = [
         {
             "asset_class": cls,
             "direct": round(v["direct"], 2),

@@ -11,8 +11,11 @@ evals.py and insights.py respectively.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
+from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.dependencies import DbSession, RiskDep
@@ -70,7 +73,7 @@ class OrderDraftRead(BaseModel):
     threshold_met: bool
     gain: float
     est_ltcg_tax: float
-    routing: list[dict]
+    routing: list[dict[str, Any]]
     note: str
 
 
@@ -98,7 +101,7 @@ async def ai_critique(db: DbSession, risk: RiskDep) -> dict[str, str | None]:
 
 
 @router.get("/daily-plan")
-async def ai_daily_plan(db: DbSession) -> dict:
+async def ai_daily_plan(db: DbSession) -> dict[str, Any]:
     """Phase 28: the ranked 'do this today' plan (built by the nightly agent)."""
     from app.services.ai.action_agent import get_stored_plan
 
@@ -106,7 +109,7 @@ async def ai_daily_plan(db: DbSession) -> dict:
 
 
 @router.post("/daily-plan/refresh")
-async def ai_daily_plan_refresh(db: DbSession, risk: RiskDep) -> dict:
+async def ai_daily_plan_refresh(db: DbSession, risk: RiskDep) -> dict[str, Any]:
     """Rebuild the action plan on demand."""
     from app.services.ai.action_agent import build_and_store_plan
 
@@ -114,7 +117,7 @@ async def ai_daily_plan_refresh(db: DbSession, risk: RiskDep) -> dict:
 
 
 @router.get("/earnings")
-async def ai_earnings(db: DbSession) -> list[dict]:
+async def ai_earnings(db: DbSession) -> list[dict[str, Any]]:
     """Phase 38: upcoming earnings dates per stock holding (best-effort)."""
     from app.services.ai.earnings import earnings_calendar
 
@@ -130,7 +133,7 @@ async def ai_timetravel_dates(db: DbSession) -> list[str]:
 
 
 @router.get("/timetravel")
-async def ai_timetravel(db: DbSession, date: str) -> dict | None:
+async def ai_timetravel(db: DbSession, date: str) -> dict[str, Any] | None:
     """The portfolio as of the latest snapshot on/before `date`."""
     from app.services.ai.timetravel import snapshot_as_of
 
@@ -138,7 +141,7 @@ async def ai_timetravel(db: DbSession, date: str) -> dict | None:
 
 
 @router.get("/macro")
-async def ai_macro(db: DbSession) -> dict:
+async def ai_macro(db: DbSession) -> dict[str, Any]:
     """Phase 36: macro indicators (rupee, crude, NIFTY, VIX) vs energy exposure."""
     from app.services.ai.macro import macro_dashboard
 
@@ -165,7 +168,9 @@ async def ai_decisions(db: DbSession) -> list[DecisionRead]:
     from app.services.ai.decisions import list_decisions
 
     return [
-        DecisionRead(id=d.id, action=d.action, symbol=d.symbol, note=d.note, at=d.created_at.isoformat())
+        DecisionRead(
+            id=d.id, action=d.action, symbol=d.symbol, note=d.note, at=d.created_at.isoformat()
+        )
         for d in await list_decisions(db)
     ]
 
@@ -176,11 +181,15 @@ async def ai_add_decision(payload: DecisionCreate, db: DbSession) -> DecisionRea
     from app.services.ai.decisions import add_decision
 
     d = await add_decision(db, payload.action, payload.symbol, payload.note)
-    return DecisionRead(id=d.id, action=d.action, symbol=d.symbol, note=d.note, at=d.created_at.isoformat())
+    return DecisionRead(
+        id=d.id, action=d.action, symbol=d.symbol, note=d.note, at=d.created_at.isoformat()
+    )
 
 
 @router.get("/backtest")
-async def ai_backtest(db: DbSession, threshold_pct: float = 10.0, window: str = "2y") -> dict:
+async def ai_backtest(
+    db: DbSession, threshold_pct: float = 10.0, window: str = "2y"
+) -> dict[str, Any]:
     """Phase 54: backtest the +10% take-profit sell rule vs buy-and-hold."""
     from app.services.ai.backtest import backtest_sell_rule
 
@@ -188,7 +197,7 @@ async def ai_backtest(db: DbSession, threshold_pct: float = 10.0, window: str = 
 
 
 @router.get("/chart")
-async def ai_chart(db: DbSession, kind: str = "allocation") -> dict | None:
+async def ai_chart(db: DbSession, kind: str = "allocation") -> dict[str, Any] | None:
     """Phase 27: chart spec ({type,title,series}) for the chat to render inline."""
     from app.services.ai.chart_spec import build_chart
 
@@ -198,8 +207,8 @@ async def ai_chart(db: DbSession, kind: str = "allocation") -> dict | None:
 @router.post("/vision")
 async def ai_vision(
     db: DbSession,
-    file: UploadFile = File(...),
-    prompt: str | None = Form(default=None),
+    file: Annotated[UploadFile, File()],
+    prompt: Annotated[str | None, Form()] = None,
 ) -> dict[str, str | None]:
     """Phase 48: read an uploaded chart/screenshot with the local vision model."""
     from app.services.ai.vision import analyze_image
@@ -215,9 +224,9 @@ async def ai_vision(
 @router.post("/upload-statement")
 async def ai_upload_statement(
     db: DbSession,
-    file: UploadFile = File(...),
-    password: str | None = Form(default=None),
-) -> dict:
+    file: Annotated[UploadFile, File()],
+    password: Annotated[str | None, Form()] = None,
+) -> dict[str, Any]:
     """Phase 23: ingest a broker/CAS PDF's text into RAG (Pilot can then cite it)."""
     from app.services.ai.statement_ingest import ingest_statement
 
@@ -275,7 +284,8 @@ async def ai_status(db: DbSession) -> AiStatus:
     baseline = await get_baseline(db)
     pairs_since = max(0, pairs - baseline)
 
-    reachable = bool(settings.ollama_url) and await _ollama_reachable(settings.ollama_url)
+    ollama_url = settings.ollama_url or ""
+    reachable = bool(ollama_url) and await _ollama_reachable(ollama_url)
     custom = False
     loaded: list[LoadedModel] = []
     if reachable:
@@ -283,7 +293,7 @@ async def ai_status(db: DbSession) -> AiStatus:
 
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                base = settings.ollama_url.rstrip("/")
+                base = ollama_url.rstrip("/")
                 resp = await client.get(f"{base}/api/tags")
                 custom = any(
                     m.get("name", "").startswith("wealthpilot")
@@ -302,7 +312,11 @@ async def ai_status(db: DbSession) -> AiStatus:
     return AiStatus(
         custom_model_present=custom,
         loaded=loaded,
-        model=settings.ollama_model if settings.ollama_url else (settings.ai_chat_model if settings.anthropic_api_key else "unconfigured"),
+        model=(
+            settings.ollama_model
+            if settings.ollama_url
+            else (settings.ai_chat_model if settings.anthropic_api_key else "unconfigured")
+        ),
         ollama_reachable=reachable,
         chunks_total=total,
         chunks_embedded=embedded,
@@ -342,16 +356,14 @@ async def ai_train_stop() -> TrainRunRead:
 
 
 @router.get("/train/logs/stream")
-async def ai_train_logs_stream():
+async def ai_train_logs_stream() -> StreamingResponse:
     """SSE tail of the training generator's log output — the live terminal
     view on the AI panel. Replays recent history immediately on connect, then
     streams new lines as they're emitted; heartbeats keep the connection open
     through idle periods until the client disconnects."""
-    from fastapi.responses import StreamingResponse
-
     from app.services.ai import train_log
 
-    async def gen():
+    async def gen() -> AsyncIterator[str]:
         for line in train_log.history():
             yield f"data: {line}\n\n"
         q = train_log.subscribe()
@@ -360,7 +372,7 @@ async def ai_train_logs_stream():
                 try:
                     line = await asyncio.wait_for(q.get(), timeout=15.0)
                     yield f"data: {line}\n\n"
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": keep-alive\n\n"
         except asyncio.CancelledError:
             pass
@@ -398,9 +410,8 @@ async def ai_learn(db: DbSession, risk: RiskDep) -> LearnResult:
     """Run the full learning loop on demand: distill today's portfolio into
     memory, sync the knowledge folder, embed everything the 3070 can."""
     from app.services.ai.distill import distill_daily
-    from app.services.ai.rag import embed_pending, ingest_knowledge_dir
-
     from app.services.ai.insights import generate_insights
+    from app.services.ai.rag import embed_pending, ingest_knowledge_dir
 
     distilled = await distill_daily(db, risk)
     stats = await ingest_knowledge_dir(db)

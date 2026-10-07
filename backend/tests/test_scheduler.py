@@ -8,7 +8,7 @@ landed, instead of silently waiting for tomorrow's tick.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -64,7 +64,7 @@ async def test_catchup_skips_when_today_already_has_an_ok_snapshot(
             total_value=100.0,
             invested=90.0,
             cash=10.0,
-            ts=now_ist.astimezone(timezone.utc),
+            ts=now_ist.astimezone(UTC),
         )
     )
     await db_session.commit()
@@ -91,7 +91,7 @@ async def test_catchup_skips_for_a_snapshot_that_is_todays_only_in_ist(
             total_value=100.0,
             invested=90.0,
             cash=10.0,
-            ts=today_ist_midnight.astimezone(timezone.utc),
+            ts=today_ist_midnight.astimezone(UTC),
         )
     )
     await db_session.commit()
@@ -106,7 +106,7 @@ async def test_catchup_runs_when_only_a_failed_snapshot_exists_today(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     db_session.add(
-        Snapshot(status=SnapshotStatus.FAILED.value, error="token expired", ts=datetime.now(timezone.utc))
+        Snapshot(status=SnapshotStatus.FAILED.value, error="token expired", ts=datetime.now(UTC))
     )
     await db_session.commit()
     calls = _stub_run_daily_snapshot(monkeypatch)
@@ -125,7 +125,7 @@ async def test_catchup_runs_when_latest_ok_snapshot_is_from_a_prior_day(
             total_value=100.0,
             invested=90.0,
             cash=10.0,
-            ts=datetime.now(timezone.utc) - timedelta(days=2),
+            ts=datetime.now(UTC) - timedelta(days=2),
         )
     )
     await db_session.commit()

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from datetime import date as date_
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
@@ -12,7 +12,6 @@ from sqlalchemy.orm import selectinload
 from app.dependencies import DbSession, KiteDep
 from app.domain.enums import SnapshotStatus
 from app.models.snapshot import Snapshot
-from app.services.analytics_service import as_utc, ist_date
 from app.schemas.snapshot import (
     SnapshotHealthRead,
     SnapshotRead,
@@ -20,6 +19,7 @@ from app.schemas.snapshot import (
     to_snapshot_read,
     to_snapshot_summary,
 )
+from app.services.analytics_service import as_utc, ist_date
 from app.services.kite_sessions import get_active_session
 from app.services.snapshot_service import refresh_snapshot
 
@@ -84,7 +84,7 @@ async def health(db: DbSession) -> SnapshotHealthRead:
     hours_since_ok: float | None = None
     if last_ok is not None:
         hours_since_ok = round(
-            (datetime.now(timezone.utc) - as_utc(last_ok.ts)).total_seconds() / 3600, 2
+            (datetime.now(UTC) - as_utc(last_ok.ts)).total_seconds() / 3600, 2
         )
 
     session = await get_active_session(db)

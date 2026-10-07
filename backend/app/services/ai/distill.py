@@ -33,7 +33,8 @@ async def distill_daily(db: AsyncSession, risk_client: BaseRiskClient) -> bool:
     today = today_ist()
     goals = await load_goal_views(db)
     goal_lines = [
-        f"{g.name}: target ₹{g.target_value:,.0f} by {g.target_date}, SIP ₹{g.monthly_contribution:,.0f}/mo"
+        f"{g.name}: target ₹{g.target_value:,.0f} by {g.target_date}, "
+        f"SIP ₹{g.monthly_contribution:,.0f}/mo"
         for g in goals
         if g.target_value is not None
     ]

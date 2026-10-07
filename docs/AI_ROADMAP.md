@@ -186,7 +186,7 @@ fixed question set (grounding/clean-trailer/followups/length).
 
 **Phase 12 — Action drafting (human-in-loop) — BUILT (`c812ebe`).**
 `services/ai/order_draft.py` drafts (never places) a GTT sell: qty, +10%
-trigger, est. proceeds, 65/25/10 routing. `GET /api/ai/order-draft?symbol=` +
+trigger, est. proceeds, 50/30/20 routing. `GET /api/ai/order-draft?symbol=` +
 `draft_sell_order` chat tool + a Receipt button per sell candidate. Every draft
 says review & place it yourself — Pilot never executes.
 

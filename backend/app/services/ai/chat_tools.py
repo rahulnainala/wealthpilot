@@ -7,6 +7,7 @@ surface, chat_service.py is the conversation loop.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +20,9 @@ from app.services.portfolio_risk_service import portfolio_risk
 from app.services.risk import BaseRiskClient
 
 
-async def _tool_get_portfolio(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_get_portfolio(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     data = await latest_holding_views(db)
     if data is None:
         return "No snapshot yet."
@@ -32,7 +35,9 @@ async def _tool_get_portfolio(args: dict, db: AsyncSession, risk_client: BaseRis
     return f"Total ₹{total:,.0f}; cash ₹{cash:,.0f}\n" + "\n".join(rows)
 
 
-async def _tool_get_risk(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_get_risk(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     provider = build_market_data_provider()
     try:
         r = await portfolio_risk(db, provider, risk_client)
@@ -50,7 +55,9 @@ async def _tool_get_risk(args: dict, db: AsyncSession, risk_client: BaseRiskClie
         await provider.close()
 
 
-async def _tool_get_diversification(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_get_diversification(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     provider = build_market_data_provider()
     try:
         d = await portfolio_diversification(db, provider, risk_client)
@@ -61,13 +68,16 @@ async def _tool_get_diversification(args: dict, db: AsyncSession, risk_client: B
         )
         return (
             f"Effective holdings {d.effective_holdings:.1f}/{d.holdings}; ratio "
-            f"{d.diversification_ratio:.2f}; avg corr {d.average_correlation:.2f}; top pairs: {pairs}"
+            f"{d.diversification_ratio:.2f}; avg corr {d.average_correlation:.2f}; "
+            f"top pairs: {pairs}"
         )
     finally:
         await provider.close()
 
 
-async def _tool_get_issues(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_get_issues(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     data = await latest_holding_views(db)
     if data is None:
         return "No snapshot yet."
@@ -81,18 +91,23 @@ async def _tool_get_issues(args: dict, db: AsyncSession, risk_client: BaseRiskCl
     )
 
 
-async def _tool_list_goals(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_list_goals(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.analytics_service import load_goal_views
 
     goals = await load_goal_views(db)
     return "\n".join(
-        f"{g.key} — {g.name}: target ₹{g.target_value:,.0f} by {g.target_date}, SIP ₹{g.monthly_contribution:,.0f}/mo"
+        f"{g.key} — {g.name}: target ₹{g.target_value:,.0f} by {g.target_date}, "
+        f"SIP ₹{g.monthly_contribution:,.0f}/mo"
         for g in goals
         if g.target_value is not None
     ) or "No goals defined."
 
 
-async def _tool_simulate_goal(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_simulate_goal(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from dataclasses import replace as dc_replace
 
     from app.services.analytics_service import load_goal_views, today_ist
@@ -131,7 +146,9 @@ async def _tool_simulate_goal(args: dict, db: AsyncSession, risk_client: BaseRis
     )
 
 
-async def _tool_required_sip(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_required_sip(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.analytics_service import load_goal_views, today_ist
     from app.services.goal_simulation import solve_required_contribution
 
@@ -164,24 +181,33 @@ async def _tool_required_sip(args: dict, db: AsyncSession, risk_client: BaseRisk
     )
 
 
-async def _tool_search_knowledge(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_search_knowledge(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     hits = await hybrid_retrieve(db, str(args.get("query", "")), k=3)
     if not hits:
         return "No knowledge matches found."
     return "\n---\n".join(f"[{h.source} — {h.title}] {h.content[:800]}" for h in hits)
 
 
-async def _tool_find_similar_days(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_find_similar_days(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     q = str(args.get("query") or "").strip() or "current portfolio risk and allocation"
     hits = await retrieve_daily_notes(db, q, k=3)
     if not hits:
-        return "No dated portfolio history yet — daily notes accumulate via the nightly learning run."
+        return (
+            "No dated portfolio history yet — daily notes accumulate via the nightly "
+            "learning run."
+        )
     return "\n---\n".join(
         f"[{h.source.removeprefix('portfolio/')}] {h.content[:600]}" for h in hits
     )
 
 
-async def _tool_get_news(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_get_news(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.news import get_headlines
     from app.services.ai.sentiment import mood
 
@@ -193,7 +219,9 @@ async def _tool_get_news(args: dict, db: AsyncSession, risk_client: BaseRiskClie
     return f"Overall news mood: {label} ({avg:+.2f}).\n{lines}"
 
 
-async def _tool_optimize_portfolio(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_optimize_portfolio(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.optimize import optimize_portfolio
 
     r = await optimize_portfolio(db)
@@ -209,7 +237,9 @@ async def _tool_optimize_portfolio(args: dict, db: AsyncSession, risk_client: Ba
     )
 
 
-async def _tool_draft_sell_order(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_draft_sell_order(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.order_draft import draft_sell_order
 
     d = await draft_sell_order(db, str(args.get("symbol", "")))
@@ -223,7 +253,9 @@ async def _tool_draft_sell_order(args: dict, db: AsyncSession, risk_client: Base
     )
 
 
-async def _tool_earnings_calendar(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_earnings_calendar(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.earnings import earnings_calendar
 
     rows = await earnings_calendar(db)
@@ -232,16 +264,18 @@ async def _tool_earnings_calendar(args: dict, db: AsyncSession, risk_client: Bas
     return "Upcoming earnings: " + "; ".join(f"{r['symbol']} {r['earnings_date']}" for r in rows)
 
 
-async def _tool_hedge(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_hedge(args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient) -> str:
     from app.services.ai.options import hedge_analysis
 
     h = await hedge_analysis(db)
     if h is None:
         return "No snapshot yet."
-    return h.get("note", "No equity-like exposure to hedge.")
+    return str(h.get("note", "No equity-like exposure to hedge."))
 
 
-async def _tool_forecast(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_forecast(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.forecast import forecast_signals
 
     f = await forecast_signals(db)
@@ -254,17 +288,21 @@ async def _tool_forecast(args: dict, db: AsyncSession, risk_client: BaseRiskClie
     )
 
 
-async def _tool_macro(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_macro(args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient) -> str:
     from app.services.ai.macro import macro_dashboard
 
     m = await macro_dashboard(db)
     if not m["indicators"]:
         return "Macro feed unreachable right now."
-    line = "; ".join(f"{i['name']} {i['price']:,.2f} ({i['change_pct']:+.1f}%)" for i in m["indicators"])
+    line = "; ".join(
+        f"{i['name']} {i['price']:,.2f} ({i['change_pct']:+.1f}%)" for i in m["indicators"]
+    )
     return f"{line}. {m['note']}"
 
 
-async def _tool_recall_decisions(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_recall_decisions(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.decisions import list_decisions
 
     rows = await list_decisions(db, limit=8)
@@ -275,7 +313,9 @@ async def _tool_recall_decisions(args: dict, db: AsyncSession, risk_client: Base
     )
 
 
-async def _tool_dividend_forecast(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_dividend_forecast(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.dividends import dividend_forecast
 
     r = await dividend_forecast(db)
@@ -289,20 +329,25 @@ async def _tool_dividend_forecast(args: dict, db: AsyncSession, risk_client: Bas
     )
 
 
-async def _tool_portfolio_xray(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_portfolio_xray(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.xray import portfolio_xray
 
     r = await portfolio_xray(db)
     if r is None:
         return "No snapshot yet."
     rows = "; ".join(
-        f"{c['asset_class']} {c['weight'] * 100:.0f}% (direct ₹{c['direct']:,.0f} + funds ₹{c['fund']:,.0f})"
+        f"{c['asset_class']} {c['weight'] * 100:.0f}% "
+        f"(direct ₹{c['direct']:,.0f} + funds ₹{c['fund']:,.0f})"
         for c in r["classes"]
     )
     return f"True exposure: {rows}."
 
 
-async def _tool_stress_scenario(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_stress_scenario(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.stress import run_stress
 
     r = await run_stress(db, str(args.get("scenario") or "market"))
@@ -315,7 +360,9 @@ async def _tool_stress_scenario(args: dict, db: AsyncSession, risk_client: BaseR
     )
 
 
-async def _tool_fi_projection(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_fi_projection(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.fi import fi_projection
 
     r = await fi_projection(
@@ -348,7 +395,9 @@ async def _tool_fi_projection(args: dict, db: AsyncSession, risk_client: BaseRis
     )
 
 
-async def _tool_make_chart(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_make_chart(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.chart_spec import build_chart
 
     kind = str(args.get("kind") or "allocation").lower()
@@ -359,7 +408,9 @@ async def _tool_make_chart(args: dict, db: AsyncSession, risk_client: BaseRiskCl
     return f"[[chart:{kind}]] {spec['title']}: {top}."
 
 
-async def _tool_benchmark(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_benchmark(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.benchmark import benchmark_vs_nifty
 
     b = await benchmark_vs_nifty(db)
@@ -373,7 +424,9 @@ async def _tool_benchmark(args: dict, db: AsyncSession, risk_client: BaseRiskCli
     )
 
 
-async def _tool_tax_impact(args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def _tool_tax_impact(
+    args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     from app.services.ai.tax import tax_summary
 
     t = await tax_summary(db)
@@ -390,7 +443,9 @@ async def _tool_tax_impact(args: dict, db: AsyncSession, risk_client: BaseRiskCl
     )
 
 
-_TOOL_HANDLERS: dict[str, Callable[[dict, AsyncSession, BaseRiskClient], Awaitable[str]]] = {
+ToolHandler = Callable[[dict[str, Any], AsyncSession, BaseRiskClient], Awaitable[str]]
+
+_TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_portfolio": _tool_get_portfolio,
     "get_risk": _tool_get_risk,
     "get_diversification": _tool_get_diversification,
@@ -418,7 +473,9 @@ _TOOL_HANDLERS: dict[str, Callable[[dict, AsyncSession, BaseRiskClient], Awaitab
 }
 
 
-async def run_tool(name: str, args: dict, db: AsyncSession, risk_client: BaseRiskClient) -> str:
+async def run_tool(
+    name: str, args: dict[str, Any], db: AsyncSession, risk_client: BaseRiskClient
+) -> str:
     handler = _TOOL_HANDLERS.get(name)
     if handler is None:
         return f"Unknown tool {name}"

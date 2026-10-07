@@ -9,12 +9,14 @@ allowed to move money — deliberately narrow and logged.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.enums import SnapshotStatus
 from app.models.order_audit import OrderAudit
-from app.models.snapshot import Snapshot, SnapshotHolding, SnapshotStatus
+from app.models.snapshot import Snapshot, SnapshotHolding
 from app.services.kite import BaseKiteService
 
 logger = logging.getLogger("wealthpilot.execution")
@@ -44,7 +46,7 @@ async def _last_price(db: AsyncSession, symbol: str, fallback: float) -> float:
 
 async def execute_gtt_sell(
     db: AsyncSession, kite: BaseKiteService, symbol: str, confirm: bool
-) -> dict:
+) -> dict[str, Any]:
     """Dry-run preview (confirm=False) or place the real GTT (confirm=True)."""
     from app.services.ai.order_draft import draft_sell_order
 
@@ -117,7 +119,7 @@ async def execute_gtt_sell(
         return {"status": "failed", "message": str(exc), "order": preview}
 
 
-async def basket_rebalance_preview(db: AsyncSession) -> dict:
+async def basket_rebalance_preview(db: AsyncSession) -> dict[str, Any]:
     """Phase 43 — preview the trims to move toward the risk-parity target.
 
     Preview only: it lists which holdings to reduce and by how much (largest in
@@ -134,7 +136,7 @@ async def basket_rebalance_preview(db: AsyncSession) -> dict:
         return {"trims": [], "message": "Need at least two asset classes to rebalance."}
     holdings, _cash = data
 
-    trims: list[dict] = []
+    trims: list[dict[str, Any]] = []
     for r in opt.rebalance:
         if r["delta_amount"] >= -500:  # only meaningful reductions
             continue
@@ -180,7 +182,7 @@ async def set_auto_execute(db: AsyncSession, on: bool) -> bool:
     return bool(on)
 
 
-async def run_auto_execute(db: AsyncSession, kite: BaseKiteService) -> dict:
+async def run_auto_execute(db: AsyncSession, kite: BaseKiteService) -> dict[str, Any]:
     """Phase 44 — opt-in autonomous placement of +10% sells.
 
     OFF by default (kill-switch = set_auto_execute(False)). When ON, places a GTT

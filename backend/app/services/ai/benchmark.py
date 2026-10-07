@@ -17,7 +17,8 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.snapshot import Snapshot, SnapshotStatus
+from app.domain.enums import SnapshotStatus
+from app.models.snapshot import Snapshot
 
 logger = logging.getLogger("wealthpilot.ai")
 

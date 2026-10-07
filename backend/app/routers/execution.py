@@ -6,6 +6,8 @@ placed only with confirm=true, behind auth, and every attempt is audit-logged.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -20,7 +22,9 @@ class GttRequest(BaseModel):
 
 
 @router.post("/gtt")
-async def place_gtt(payload: GttRequest, db: DbSession, kite: KiteDep, _: RequireAuth) -> dict:
+async def place_gtt(
+    payload: GttRequest, db: DbSession, kite: KiteDep, _: RequireAuth
+) -> dict[str, Any]:
     """Dry-run (default) or place a real GTT sell for a held stock. Human-in-loop."""
     from app.services.execution import execute_gtt_sell
 
@@ -32,7 +36,7 @@ class AutoToggle(BaseModel):
 
 
 @router.get("/auto")
-async def auto_status(db: DbSession, _: RequireAuth) -> dict:
+async def auto_status(db: DbSession, _: RequireAuth) -> dict[str, Any]:
     """Phase 44: is autonomous +10% auto-execute on?"""
     from app.services.execution import get_auto_execute
 
@@ -40,7 +44,7 @@ async def auto_status(db: DbSession, _: RequireAuth) -> dict:
 
 
 @router.post("/auto")
-async def auto_set(payload: AutoToggle, db: DbSession, _: RequireAuth) -> dict:
+async def auto_set(payload: AutoToggle, db: DbSession, _: RequireAuth) -> dict[str, Any]:
     """Toggle auto-execute (kill-switch). OFF by default; only fires in secured mode."""
     from app.services.execution import set_auto_execute
 
@@ -48,7 +52,7 @@ async def auto_set(payload: AutoToggle, db: DbSession, _: RequireAuth) -> dict:
 
 
 @router.get("/basket-preview")
-async def basket_preview(db: DbSession, _: RequireAuth) -> dict:
+async def basket_preview(db: DbSession, _: RequireAuth) -> dict[str, Any]:
     """Phase 43: preview the trims to reach the risk-parity target (no placement)."""
     from app.services.execution import basket_rebalance_preview
 

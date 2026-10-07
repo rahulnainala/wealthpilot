@@ -11,7 +11,6 @@ units are bought or sold, independent of market value.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date as date_
 from datetime import timedelta
 
 from sqlalchemy import select

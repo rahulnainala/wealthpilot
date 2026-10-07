@@ -6,7 +6,7 @@ into the framework-free inputs the analytics functions expect.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -38,7 +38,7 @@ def as_utc(ts: datetime) -> datetime:
     comes back naive. Comparing or sorting across that mix raises outright.
     Everything is written as UTC, so naive means UTC here.
     """
-    return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+    return ts.replace(tzinfo=UTC) if ts.tzinfo is None else ts
 
 
 def ist_date(ts: datetime) -> date:

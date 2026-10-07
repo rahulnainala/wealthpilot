@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 
@@ -60,7 +62,7 @@ async def ai_ab_eval(
 
 
 @router.get("/ab-result")
-async def ai_ab_result(db: DbSession) -> dict:
+async def ai_ab_result(db: DbSession) -> dict[str, Any]:
     """The latest A/B comparison + swap recommendation."""
     from app.services.ai.ab_gate import get_ab_result
 

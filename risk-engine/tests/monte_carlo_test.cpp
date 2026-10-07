@@ -223,8 +223,7 @@ TEST(ProjectionTest, ZeroMonthsIsEmpty) {
 namespace {
 
 // Zero-volatility plan so every assertion is a closed form, not a distribution.
-wr::RetirementPlanInput MakeFlatPlan(double value, double mean, int accum_months,
-                                     int draw_months) {
+wr::RetirementPlanInput MakeFlatPlan(double value, double mean, int accum_months, int draw_months) {
   wr::RetirementPlanInput in;
   in.sleeves.push_back({value, mean, 0.0});
   in.accumulation_months = accum_months;

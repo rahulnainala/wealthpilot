@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +11,7 @@ from app.domain.enums import HoldingType, SnapshotStatus
 from app.models.snapshot import Snapshot, SnapshotHolding
 from app.services.exit_ledger import canonical_symbol, detect_exits, list_exits
 
-BASE = datetime(2026, 7, 20, 9, 0, tzinfo=timezone.utc)
+BASE = datetime(2026, 7, 20, 9, 0, tzinfo=UTC)
 
 
 def _stock(symbol: str, qty: float, avg: float, ltp: float) -> SnapshotHolding:

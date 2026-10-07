@@ -86,7 +86,8 @@ async def evaluate_watch(db: AsyncSession, risk_client: BaseRiskClient) -> list[
         heavy = max(holdings, key=lambda h: h.value, default=None)
         if heavy is not None and heavy.value / total >= CONCENTRATION_WEIGHT:
             # Tickers read fine for stocks; funds carry an ISIN symbol, so use the name.
-            label = heavy.symbol if getattr(heavy.type, "value", heavy.type) == "stock" else (heavy.name or heavy.symbol)
+            is_stock = getattr(heavy.type, "value", heavy.type) == "stock"
+            label = heavy.symbol if is_stock else (heavy.name or heavy.symbol)
             alerts.append(Alert(
                 f"conc:{heavy.symbol}", "watch",
                 f"{label[:32]} is {heavy.value / total * 100:.1f}% of the portfolio "

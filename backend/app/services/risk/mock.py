@@ -307,7 +307,9 @@ class MockRiskEngineClient(BaseRiskClient):
             values = [s.value for s in inputs.sleeves]
             next_band = 0
 
-            def record(month_done: int) -> None:
+            def record(
+                month_done: int, p: int = p, values: list[float] = values
+            ) -> None:
                 nonlocal next_band
                 while next_band < len(band_months) and band_months[next_band] == month_done:
                     banded[next_band][p] = sum(values)
@@ -324,7 +326,10 @@ class MockRiskEngineClient(BaseRiskClient):
                 withdrawal = (
                     0.0
                     if accumulating
-                    else min(total_before, _schedule_at(inputs.withdrawal_schedule, month - accum, 0.0))
+                    else min(
+                        total_before,
+                        _schedule_at(inputs.withdrawal_schedule, month - accum, 0.0),
+                    )
                 )
                 contribution = (
                     _schedule_at(inputs.contribution_schedule, month, inputs.monthly_contribution)
@@ -346,12 +351,11 @@ class MockRiskEngineClient(BaseRiskClient):
 
                 if month + 1 == accum:
                     corpus_at_retirement[p] = sum(values)
-                if not accumulating and path_depletion < 0.0:
-                    # A corpus this small can't fund another month — call it
-                    # depleted rather than letting a rounding crumb compound
-                    # back to life.
-                    if sum(values) <= 1.0:
-                        path_depletion = float(month - accum + 1)
+                # A corpus this small can't fund another month — call it
+                # depleted rather than letting a rounding crumb compound back
+                # to life.
+                if not accumulating and path_depletion < 0.0 and sum(values) <= 1.0:
+                    path_depletion = float(month - accum + 1)
                 record(month + 1)
 
             terminal[p] = sum(values)
@@ -370,7 +374,7 @@ class MockRiskEngineClient(BaseRiskClient):
                 median=round(_percentile(sorted(col), 0.50), 2),
                 p90=round(_percentile(sorted(col), 0.90), 2),
             )
-            for month, col in zip(band_months, banded)
+            for month, col in zip(band_months, banded, strict=True)
         ]
 
         return RetirementPlanOutcome(

@@ -8,9 +8,10 @@ logic out of the routers.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kite_session import KiteSession
@@ -70,10 +71,13 @@ async def mark_expired_sessions_stale(db: AsyncSession) -> int:
     is dead. Marking it stale up front means the app shows the reconnect banner
     immediately instead of 502/401-ing on the first live call.
     """
-    result = await db.execute(
-        update(KiteSession)
-        .where(KiteSession.is_stale.is_(False), KiteSession.session_date < _today_ist())
-        .values(is_stale=True)
+    result = cast(
+        "CursorResult[Any]",
+        await db.execute(
+            update(KiteSession)
+            .where(KiteSession.is_stale.is_(False), KiteSession.session_date < _today_ist())
+            .values(is_stale=True)
+        ),
     )
     await db.commit()
     return result.rowcount or 0

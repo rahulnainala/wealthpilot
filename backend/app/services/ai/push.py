@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.push_subscription import PushSubscription
+
+if TYPE_CHECKING:
+    from py_vapid import Vapid01
 
 logger = logging.getLogger("wealthpilot.ai")
 
@@ -27,7 +31,7 @@ def push_enabled() -> bool:
     return bool(s.vapid_public_key and s.vapid_private_key)
 
 
-def _vapid():
+def _vapid() -> Vapid01:
     """A py_vapid instance from the stored base64url raw private key."""
     from py_vapid import Vapid01
 

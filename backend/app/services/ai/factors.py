@@ -12,8 +12,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+from typing import Any
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import Bucket, HoldingType
 from app.services.analytics_service import latest_holding_views
@@ -72,7 +74,7 @@ async def _stock_momentum(client: httpx.AsyncClient, symbol: str) -> float:
     return round(math.tanh(trailing_return * 4), 3)
 
 
-async def factor_exposure(db) -> dict:
+async def factor_exposure(db: AsyncSession) -> dict[str, Any]:
     """Value-weighted factor tilts across the whole equity book."""
     loaded = await latest_holding_views(db)
     holdings = loaded[0] if loaded is not None else []

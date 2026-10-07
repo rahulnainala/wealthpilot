@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import CursorResult, select
 from sqlalchemy import delete as sql_delete
-from sqlalchemy import select
 
 from app.dependencies import DbSession
 from app.models.watchlist import WatchlistItem
@@ -49,7 +51,7 @@ async def list_watch(db: DbSession) -> list[WatchRead]:
 
 
 @router.get("/screener")
-async def screener(db: DbSession) -> dict:
+async def screener(db: DbSession) -> dict[str, Any]:
     """Gap-based ideas from the portfolio's own imbalances (no external universe)."""
     from app.services.ai.xray import portfolio_xray
 
@@ -87,7 +89,10 @@ async def add_watch(payload: SymbolIn, db: DbSession) -> WatchRead:
 
 @router.delete("/{item_id}")
 async def delete_watch(item_id: int, db: DbSession) -> dict[str, str]:
-    res = await db.execute(sql_delete(WatchlistItem).where(WatchlistItem.id == item_id))
+    res = cast(
+        "CursorResult[Any]",
+        await db.execute(sql_delete(WatchlistItem).where(WatchlistItem.id == item_id)),
+    )
     await db.commit()
     if res.rowcount == 0:
         raise HTTPException(status_code=404, detail="not_found")

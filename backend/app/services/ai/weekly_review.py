@@ -18,7 +18,6 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.models.knowledge import KnowledgeChunk
 from app.services.ai.brief_service import _compile_context
 from app.services.ai.providers import build_ai_provider
@@ -69,8 +68,6 @@ async def generate_weekly_review(
     provider = await build_ai_provider()
     if provider is None:
         return WeeklyReview(status="unconfigured")
-
-    settings = get_settings()
 
     async def _factory() -> dict[str, str]:
         text = await provider.complete(_SYSTEM, context)

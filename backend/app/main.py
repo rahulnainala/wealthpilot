@@ -88,7 +88,9 @@ _AUTH_OPEN_PREFIXES = ("/api/auth/", "/healthz", "/docs", "/openapi.json", "/red
 
 
 @app.middleware("http")
-async def _auth_gate(request: Request, call_next):
+async def _auth_gate(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     """Phase 40: when APP_PASSWORD is set, require a valid session token for every
     request except auth/health. Open (no-op) when auth is disabled (local/mock)."""
     from app.security.app_auth import auth_enabled, verify_session_token

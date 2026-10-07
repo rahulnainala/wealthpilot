@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import HoldingType
 from app.models.goal import Goal
@@ -44,7 +46,7 @@ async def _closes(client: httpx.AsyncClient, symbol: str, window: str) -> list[f
     return [float(c) for c in raw if c is not None]
 
 
-def _simulate(closes: list[float], threshold_pct: float) -> dict | None:
+def _simulate(closes: list[float], threshold_pct: float) -> dict[str, Any] | None:
     """Take-profit vs buy-and-hold on one price series (entry = first close)."""
     if len(closes) < 2:
         return None
@@ -78,7 +80,9 @@ def _simulate(closes: list[float], threshold_pct: float) -> dict | None:
     }
 
 
-async def backtest_sell_rule(db, threshold_pct: float = 10.0, window: str = "2y") -> dict:
+async def backtest_sell_rule(
+    db: AsyncSession, threshold_pct: float = 10.0, window: str = "2y"
+) -> dict[str, Any]:
     """Backtest the +10% take-profit rule across the legacy (unassigned) stocks."""
     loaded = await latest_holding_views(db)
     holdings = loaded[0] if loaded is not None else []

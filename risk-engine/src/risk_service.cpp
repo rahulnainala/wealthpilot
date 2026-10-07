@@ -47,8 +47,7 @@ grpc::Status RiskEngineServiceImpl::SimulateGoalProbability(grpc::ServerContext*
                                                             GoalSimResponse* response) {
   RpcLog log("SimulateGoalProbability");
   log.detail() << " sleeves=" << request->sleeves_size()
-               << " months=" << request->months_remaining()
-               << " paths=" << request->num_paths();
+               << " months=" << request->months_remaining() << " paths=" << request->num_paths();
 
   GoalSimInput input;
   input.sleeves.reserve(static_cast<std::size_t>(request->sleeves_size()));

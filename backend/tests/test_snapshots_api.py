@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
 from sqlalchemy import func, select
@@ -13,6 +13,12 @@ from app.domain.enums import SnapshotStatus
 from app.main import app
 from app.models.snapshot import Snapshot
 from tests.test_snapshot_service import _ExpiredKite
+
+
+def _ok(total: float, invested: float, cash: float, ts: datetime) -> Snapshot:
+    return Snapshot(
+        status=SnapshotStatus.OK.value, total_value=total, invested=invested, cash=cash, ts=ts
+    )
 
 
 async def test_refresh_then_latest_and_history(client: AsyncClient) -> None:
@@ -70,14 +76,14 @@ async def test_history_collapses_multiple_refreshes_per_day_to_the_latest(
     # "yesterday" — history should return exactly one row per day, each the
     # latest for that day. Anchored at 08:00 UTC (13:30 IST) so +/- a few
     # hours can't accidentally cross the IST midnight boundary.
-    now = datetime(2026, 1, 15, 8, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 15, 8, 0, tzinfo=UTC)
     yesterday = now - timedelta(days=1)
     db_session.add_all(
         [
-            Snapshot(status=SnapshotStatus.OK.value, total_value=100.0, invested=90.0, cash=10.0, ts=yesterday),
-            Snapshot(status=SnapshotStatus.OK.value, total_value=200.0, invested=190.0, cash=10.0, ts=now - timedelta(hours=6)),
-            Snapshot(status=SnapshotStatus.OK.value, total_value=210.0, invested=190.0, cash=20.0, ts=now - timedelta(hours=3)),
-            Snapshot(status=SnapshotStatus.OK.value, total_value=220.0, invested=190.0, cash=30.0, ts=now),
+            _ok(100.0, 90.0, 10.0, yesterday),
+            _ok(200.0, 190.0, 10.0, now - timedelta(hours=6)),
+            _ok(210.0, 190.0, 20.0, now - timedelta(hours=3)),
+            _ok(220.0, 190.0, 30.0, now),
         ]
     )
     await db_session.commit()

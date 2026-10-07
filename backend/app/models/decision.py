@@ -12,6 +12,7 @@ class Decision(Base, TimestampMixin):
     __tablename__ = "decisions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    action: Mapped[str] = mapped_column(String(64))       # sold | bought | paused SIP | rebalanced …
+    # sold | bought | paused SIP | rebalanced …
+    action: Mapped[str] = mapped_column(String(64))
     symbol: Mapped[str | None] = mapped_column(String(64), default=None)
     note: Mapped[str] = mapped_column(Text)               # the reasoning

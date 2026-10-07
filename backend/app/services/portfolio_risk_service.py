@@ -17,12 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analytics.models import HoldingView
 from app.domain.enums import HoldingType
 from app.services.analytics_service import latest_holding_views
+from app.services.cache import get_shared_cache
 from app.services.goal_simulation import (
     _DEFAULT_ASSUMPTION,
     RETURN_ASSUMPTIONS,
     _sleeve_class,
 )
-from app.services.cache import get_shared_cache
 from app.services.market import BaseMarketDataProvider
 from app.services.risk import BaseRiskClient, BucketRisk, PortfolioRiskOutcome
 

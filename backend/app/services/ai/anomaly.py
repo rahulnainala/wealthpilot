@@ -13,7 +13,8 @@ import statistics
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.snapshot import Snapshot, SnapshotStatus
+from app.domain.enums import SnapshotStatus
+from app.models.snapshot import Snapshot
 
 _LOOKBACK = 30
 _MIN_POINTS = 8

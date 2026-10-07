@@ -7,12 +7,14 @@ value, P&L, and top holdings.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.snapshot import Snapshot, SnapshotHolding, SnapshotStatus
+from app.domain.enums import SnapshotStatus
+from app.models.snapshot import Snapshot, SnapshotHolding
 
 
 async def available_dates(db: AsyncSession) -> list[str]:
@@ -27,9 +29,9 @@ async def available_dates(db: AsyncSession) -> list[str]:
     return sorted({r.date().isoformat() for r in rows})
 
 
-async def snapshot_as_of(db: AsyncSession, date_str: str) -> dict | None:
+async def snapshot_as_of(db: AsyncSession, date_str: str) -> dict[str, Any] | None:
     try:
-        target = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc) + timedelta(days=1)
+        target = datetime.fromisoformat(date_str).replace(tzinfo=UTC) + timedelta(days=1)
     except (ValueError, TypeError):
         return None
 

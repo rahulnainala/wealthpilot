@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.services.ai.chat_tools import run_tool as _run_tool
 from app.services.ai.providers import _ollama_reachable, normalize_followups, strip_reasoning
 from app.services.ai.rag import hybrid_retrieve
@@ -51,7 +53,10 @@ _TOOLS = [
     },
     {
         "name": "get_risk",
-        "description": "Historical VaR/CVaR, annualized volatility, max drawdown, per-bucket risk contributions.",
+        "description": (
+            "Historical VaR/CVaR, annualized volatility, max drawdown, per-bucket risk "
+            "contributions."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
@@ -71,7 +76,11 @@ _TOOLS = [
     },
     {
         "name": "simulate_goal",
-        "description": "Run a Monte Carlo what-if for a goal. Optional overrides: monthly_contribution (INR/mo), target_value (INR), shock_pct (one-time market crash at t=0, e.g. 30 for -30%).",
+        "description": (
+            "Run a Monte Carlo what-if for a goal. Optional overrides: monthly_contribution "
+            "(INR/mo), target_value (INR), shock_pct (one-time market crash at t=0, e.g. 30 for "
+            "-30%)."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -85,7 +94,10 @@ _TOOLS = [
     },
     {
         "name": "required_sip",
-        "description": "Solve the monthly SIP needed for a goal to reach a target success probability (default 0.75). Use for 'what SIP gets X to 75%' and multi-goal rebalancing plans.",
+        "description": (
+            "Solve the monthly SIP needed for a goal to reach a target success probability (default"
+            " 0.75). Use for 'what SIP gets X to 75%' and multi-goal rebalancing plans."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -97,7 +109,10 @@ _TOOLS = [
     },
     {
         "name": "search_knowledge",
-        "description": "Search the finance/portfolio knowledge base (tax rules, risk concepts, plan principles).",
+        "description": (
+            "Search the finance/portfolio knowledge base (tax rules, risk concepts, plan "
+            "principles)."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {"query": {"type": "string"}},
@@ -106,91 +121,159 @@ _TOOLS = [
     },
     {
         "name": "find_similar_days",
-        "description": "Find past days when this portfolio looked similar (risk/allocation/mood) to compare with now. Use for 'has this happened before', 'how did we recover', historical-analogue questions.",
+        "description": (
+            "Find past days when this portfolio looked similar (risk/allocation/mood) to compare "
+            "with now. Use for 'has this happened before', 'how did we recover', historical-"
+            "analogue questions."
+        ),
         "input_schema": {
             "type": "object",
-            "properties": {"query": {"type": "string", "description": "situation to match, e.g. 'high VaR, energy heavy'"}},
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "situation to match, e.g. 'high VaR, energy heavy'",
+                }
+            },
         },
     },
     {
         "name": "get_news",
-        "description": "Recent news headlines for a holding (free feed). Use when deciding whether to sell now / 'what's happening with X'. Context only — headlines are not advice.",
+        "description": (
+            "Recent news headlines for a holding (free feed). Use when deciding whether to sell now"
+            " / 'what's happening with X'. Context only — headlines are not advice."
+        ),
         "input_schema": {
             "type": "object",
-            "properties": {"query": {"type": "string", "description": "company or ticker, e.g. 'NMDC' or 'ONGC'"}},
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "company or ticker, e.g. 'NMDC' or 'ONGC'",
+                }
+            },
             "required": ["query"],
         },
     },
     {
         "name": "optimize_portfolio",
-        "description": "Suggest a risk-balanced (inverse-volatility) target allocation across asset classes and the rebalance to reach it. Use for 'how should I rebalance', 'reduce my risk', 'optimal allocation'.",
+        "description": (
+            "Suggest a risk-balanced (inverse-volatility) target allocation across asset classes "
+            "and the rebalance to reach it. Use for 'how should I rebalance', 'reduce my risk', "
+            "'optimal allocation'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "draft_sell_order",
-        "description": "Draft (never place) the GTT sell-order params for a held stock: quantity, +10% trigger price, estimated proceeds, gain, LTCG tax, and 65/25/10 routing. Use for 'how would I sell X' / 'set up the order'. The owner reviews and places it themselves.",
+        "description": (
+            "Draft (never place) the GTT sell-order params for a held stock: quantity, +10% trigger"
+            " price, estimated proceeds, gain, LTCG tax, and 50/30/20 routing. Use for 'how would I"
+            " sell X' / 'set up the order'. The owner reviews and places it themselves."
+        ),
         "input_schema": {
             "type": "object",
-            "properties": {"symbol": {"type": "string", "description": "stock ticker, e.g. 'NMDC'"}},
+            "properties": {
+                "symbol": {"type": "string", "description": "stock ticker, e.g. 'NMDC'"}
+            },
             "required": ["symbol"],
         },
     },
     {
         "name": "tax_impact",
-        "description": "Estimate the tax on realizing stock gains (LTCG vs STCG, ₹1.25L exemption) and list tax-loss-harvest candidates. Use for 'what's my tax if I sell', 'tax on the sell plan'.",
+        "description": (
+            "Estimate the tax on realizing stock gains (LTCG vs STCG, ₹1.25L exemption) and list "
+            "tax-loss-harvest candidates. Use for 'what's my tax if I sell', 'tax on the sell "
+            "plan'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "benchmark",
-        "description": "Compare the portfolio's recent return against NIFTY 50 (alpha). Use for 'am I beating the index', 'how vs NIFTY'.",
+        "description": (
+            "Compare the portfolio's recent return against NIFTY 50 (alpha). Use for 'am I beating "
+            "the index', 'how vs NIFTY'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "earnings_calendar",
-        "description": "Upcoming earnings dates for your stock holdings. Use for 'when do my stocks report', 'earnings coming up'.",
+        "description": (
+            "Upcoming earnings dates for your stock holdings. Use for 'when do my stocks report', "
+            "'earnings coming up'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "macro",
-        "description": "Macro indicators (rupee, crude, NIFTY, India VIX) and how they relate to your energy exposure. Use for 'what's crude doing', 'macro picture'.",
+        "description": (
+            "Macro indicators (rupee, crude, NIFTY, India VIX) and how they relate to your energy "
+            "exposure. Use for 'what's crude doing', 'macro picture'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "forecast",
-        "description": "Near-term volatility forecast (EWMA) + recent momentum for the portfolio. NOT a price prediction. Use for 'how volatile', 'what's the trend'.",
+        "description": (
+            "Near-term volatility forecast (EWMA) + recent momentum for the portfolio. NOT a price "
+            "prediction. Use for 'how volatile', 'what's the trend'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "hedge",
-        "description": "Protective-put hedge sizing (NIFTY put lots + estimated premium) for the equity exposure. Use for 'how do I hedge', 'protect my downside'. Heuristic, not a live quote.",
+        "description": (
+            "Protective-put hedge sizing (NIFTY put lots + estimated premium) for the equity "
+            "exposure. Use for 'how do I hedge', 'protect my downside'. Heuristic, not a live "
+            "quote."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "recall_decisions",
-        "description": "Recall the owner's past decisions and their reasoning (sold X because…, paused a SIP…). Use for 'why did I sell', 'what have I decided before'.",
+        "description": (
+            "Recall the owner's past decisions and their reasoning (sold X because…, paused a "
+            "SIP…). Use for 'why did I sell', 'what have I decided before'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "dividend_forecast",
-        "description": "Estimated annual + monthly dividend income from dividend-bucket holdings (assumed yield). Use for 'how much dividend income', 'passive income'.",
+        "description": (
+            "Estimated annual + monthly dividend income from dividend-bucket holdings (assumed "
+            "yield). Use for 'how much dividend income', 'passive income'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "portfolio_xray",
-        "description": "True asset-class exposure across everything (direct stocks vs via-funds). Use for 'real equity exposure', 'what's inside my funds'.",
+        "description": (
+            "True asset-class exposure across everything (direct stocks vs via-funds). Use for "
+            "'real equity exposure', 'what's inside my funds'."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "stress_scenario",
-        "description": "Sector-aware stress test. scenario: 'energy' (crude shock), 'market' (broad crash), 'rates', 'gold'. Use for 'what if oil crashes', 'stress my portfolio'.",
+        "description": (
+            "Sector-aware stress test. scenario: 'energy' (crude shock), 'market' (broad crash), "
+            "'rates', 'gold'. Use for 'what if oil crashes', 'stress my portfolio'."
+        ),
         "input_schema": {
             "type": "object",
-            "properties": {"scenario": {"type": "string", "enum": ["energy", "market", "rates", "gold"]}},
+            "properties": {
+                "scenario": {"type": "string", "enum": ["energy", "market", "rates", "gold"]}
+            },
         },
     },
     {
         "name": "fi_projection",
-        "description": "Whole-portfolio retirement (FI) Monte Carlo + safe-withdrawal income, inflation-adjusted. target_corpus is in TODAY'S purchasing power. Optional: years, target_corpus (INR), monthly_contribution, swr (e.g. 0.035), inflation (default 0.06, floored at 0.06), post_selloff (true = model the legacy dividend basket already sold and reinvested as equity). Use for 'can I retire', 'how much can I withdraw', 'what's it worth in today's money'.",
+        "description": (
+            "Whole-portfolio retirement (FI) Monte Carlo + safe-withdrawal income, inflation-"
+            "adjusted. target_corpus is in TODAY'S purchasing power. Optional: years, target_corpus"
+            " (INR), monthly_contribution, swr (e.g. 0.035), inflation (default 0.06, floored at "
+            "0.06), post_selloff (true = model the legacy dividend basket already sold and "
+            "reinvested as equity). Use for 'can I retire', 'how much can I withdraw', 'what's it "
+            "worth in today's money'."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -205,7 +288,11 @@ _TOOLS = [
     },
     {
         "name": "make_chart",
-        "description": "Render a chart of the portfolio. kind: 'allocation' (donut by asset class), 'holdings' (top by value), 'pnl' (gains/losses). Use for 'show/chart/visualize'. Include the returned [[chart:KIND]] marker in your reply so the UI draws it.",
+        "description": (
+            "Render a chart of the portfolio. kind: 'allocation' (donut by asset class), 'holdings'"
+            " (top by value), 'pnl' (gains/losses). Use for 'show/chart/visualize'. Include the "
+            "returned [[chart:KIND]] marker in your reply so the UI draws it."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {"kind": {"type": "string", "enum": ["allocation", "holdings", "pnl"]}},
@@ -225,7 +312,7 @@ class ChatResult:
 
 async def chat(
     message: str,
-    history: list[dict],
+    history: list[dict[str, Any]],
     db: AsyncSession,
     risk_client: BaseRiskClient,
     screen: str | None = None,
@@ -300,7 +387,7 @@ async def chat(
     )
 
 
-def _openai_tools() -> list[dict]:
+def _openai_tools() -> list[dict[str, Any]]:
     """Ollama consumes OpenAI-style tool schemas; convert from Anthropic's."""
     return [
         {
@@ -331,9 +418,15 @@ async def _gather_context(
     return "\n\n".join(parts)
 
 
+def _ollama_base(settings: Settings) -> str:
+    if not settings.ollama_url:
+        raise RuntimeError("OLLAMA_URL is not configured")
+    return settings.ollama_url
+
+
 async def _chat_via_ollama(
     message: str,
-    history: list[dict],
+    history: list[dict[str, Any]],
     db: AsyncSession,
     risk_client: BaseRiskClient,
     screen: str | None = None,
@@ -356,7 +449,7 @@ async def _chat_via_ollama(
     ]
     tools_used: list[str] = []
 
-    async with httpx.AsyncClient(base_url=settings.ollama_url, timeout=180.0) as client:
+    async with httpx.AsyncClient(base_url=_ollama_base(settings), timeout=180.0) as client:
         for _ in range(_MAX_TOOL_ROUNDS + 1):
             resp = await client.post(
                 "/api/chat",
@@ -423,7 +516,6 @@ async def _ollama_plain(
     hits = await hybrid_retrieve(db, message, k=3)
     if hits:
         parts.append("[knowledge]\n" + "\n---\n".join(h.content[:600] for h in hits))
-    settings = get_settings()
     resp = await client.post(
         "/api/chat",
         json={
@@ -441,17 +533,18 @@ async def _ollama_plain(
         },
     )
     resp.raise_for_status()
-    reply = normalize_followups(strip_reasoning(str(resp.json().get("message", {}).get("content", ""))))
+    content = str(resp.json().get("message", {}).get("content", ""))
+    reply = normalize_followups(strip_reasoning(content))
     return ChatResult(status="ok", reply=reply, tools_used=["context-injected"])
 
 
 async def stream_chat_ollama(
     message: str,
-    history: list[dict],
+    history: list[dict[str, Any]],
     db: AsyncSession,
     risk_client: BaseRiskClient,
     screen: str | None = None,
-):
+) -> AsyncIterator[tuple[str, str]]:
     """SSE generator: grounded Ollama chat with think-phase tracking.
 
     Yields ("phase", "thinking"|"answering") and ("token", text) tuples; the
@@ -466,7 +559,11 @@ async def stream_chat_ollama(
         + context
         + "\nIf the data above lacks the answer, say so instead of guessing."
     )
-    messages = [{"role": "system", "content": system}, *history, {"role": "user", "content": message}]
+    messages = [
+        {"role": "system", "content": system},
+        *history,
+        {"role": "user", "content": message},
+    ]
 
     reply_parts: list[str] = []
     in_think = False
@@ -474,49 +571,51 @@ async def stream_chat_ollama(
     buffer = ""
     yield ("phase", "thinking")
 
-    async with httpx.AsyncClient(base_url=settings.ollama_url, timeout=300.0) as client:
-        async with client.stream(
+    async with (
+        httpx.AsyncClient(base_url=_ollama_base(settings), timeout=300.0) as client,
+        client.stream(
             "POST",
             "/api/chat",
             json={"model": pick_model(message), "messages": messages, "stream": True},
-        ) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.strip():
-                    continue
-                try:
-                    chunk = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                piece = chunk.get("message", {}).get("content", "")
-                if not piece:
-                    continue
-                buffer += piece
-                # Strip <think> blocks on the fly.
-                while buffer:
-                    if in_think:
-                        end = buffer.find("</think>")
-                        if end == -1:
-                            buffer = buffer[-8:]  # keep tail in case tag splits
-                            break
-                        buffer = buffer[end + 8 :]
-                        in_think = False
+        ) as resp,
+    ):
+        resp.raise_for_status()
+        async for line in resp.aiter_lines():
+            if not line.strip():
+                continue
+            try:
+                chunk = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            piece = chunk.get("message", {}).get("content", "")
+            if not piece:
+                continue
+            buffer += piece
+            # Strip <think> blocks on the fly.
+            while buffer:
+                if in_think:
+                    end = buffer.find("</think>")
+                    if end == -1:
+                        buffer = buffer[-8:]  # keep tail in case tag splits
+                        break
+                    buffer = buffer[end + 8 :]
+                    in_think = False
+                else:
+                    start = buffer.find("<think>")
+                    if start == -1:
+                        emit = buffer
+                        buffer = ""
                     else:
-                        start = buffer.find("<think>")
-                        if start == -1:
-                            emit = buffer
-                            buffer = ""
-                        else:
-                            emit = buffer[:start]
-                            buffer = buffer[start + 7 :]
-                            in_think = True
-                        if emit:
-                            if not started and emit.strip():
-                                started = True
-                                yield ("phase", "answering")
-                            if started:
-                                reply_parts.append(emit)
-                                yield ("token", emit)
+                        emit = buffer[:start]
+                        buffer = buffer[start + 7 :]
+                        in_think = True
+                    if emit:
+                        if not started and emit.strip():
+                            started = True
+                            yield ("phase", "answering")
+                        if started:
+                            reply_parts.append(emit)
+                            yield ("token", emit)
 
     reply = normalize_followups("".join(reply_parts).strip())
     # Send the cleaned reply so the client can replace the raw stream (drops any

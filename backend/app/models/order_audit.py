@@ -17,6 +17,7 @@ class OrderAudit(Base, TimestampMixin):
     quantity: Mapped[float] = mapped_column(Float)
     trigger_price: Mapped[float] = mapped_column(Float)
     dry_run: Mapped[bool] = mapped_column(Boolean, default=True)
-    status: Mapped[str] = mapped_column(String(16), default="pending")  # dry_run|placed|failed|blocked
+    # dry_run | placed | failed | blocked
+    status: Mapped[str] = mapped_column(String(16), default="pending")
     gtt_id: Mapped[str | None] = mapped_column(String(64), default=None)
     detail: Mapped[str | None] = mapped_column(String(512), default=None)

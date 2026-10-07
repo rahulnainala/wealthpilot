@@ -156,7 +156,11 @@ async def run_generation(target: int, concurrency: int, model: str | None) -> No
                             return
                         db.add(
                             AiInsight(
-                                text=f"Training dataset complete: {n} pairs collected. Run auto_train.py on the 3070 (or ai-training/README.md) to build wealthpilot."
+                                text=(
+                                    f"Training dataset complete: {n} pairs collected. "
+                                    "Run auto_train.py on the 3070 "
+                                    "(or ai-training/README.md) to build wealthpilot."
+                                )
                             )
                         )
                         await db.commit()

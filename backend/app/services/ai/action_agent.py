@@ -10,6 +10,7 @@ is executed.
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,13 +23,13 @@ _RANK = {"action": 0, "watch": 1, "info": 2}
 _VOL_DRIFT = 3.0  # est-vol gap (pts) that makes a rebalance worth surfacing
 
 
-async def build_daily_plan(db: AsyncSession, risk_client: BaseRiskClient) -> list[dict]:
+async def build_daily_plan(db: AsyncSession, risk_client: BaseRiskClient) -> list[dict[str, Any]]:
     """Assemble the ranked action list (most urgent first)."""
     from app.services.ai.optimize import optimize_portfolio
     from app.services.ai.tax import tax_summary
     from app.services.ai.watch import evaluate_watch
 
-    items: list[dict] = []
+    items: list[dict[str, Any]] = []
 
     for a in await evaluate_watch(db, risk_client):
         items.append({"severity": a.severity, "title": a.text})
@@ -54,7 +55,9 @@ async def build_daily_plan(db: AsyncSession, risk_client: BaseRiskClient) -> lis
     return items[:6]
 
 
-async def build_and_store_plan(db: AsyncSession, risk_client: BaseRiskClient) -> list[dict]:
+async def build_and_store_plan(
+    db: AsyncSession, risk_client: BaseRiskClient
+) -> list[dict[str, Any]]:
     items = await build_daily_plan(db, risk_client)
     payload = {"date": date.today().isoformat(), "items": items}
     row = (await db.execute(select(Setting).where(Setting.key == _PLAN_KEY))).scalar_one_or_none()
@@ -66,6 +69,6 @@ async def build_and_store_plan(db: AsyncSession, risk_client: BaseRiskClient) ->
     return items
 
 
-async def get_stored_plan(db: AsyncSession) -> dict:
+async def get_stored_plan(db: AsyncSession) -> dict[str, Any]:
     row = (await db.execute(select(Setting).where(Setting.key == _PLAN_KEY))).scalar_one_or_none()
     return row.value if row and isinstance(row.value, dict) else {"date": None, "items": []}
