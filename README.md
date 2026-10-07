@@ -12,6 +12,11 @@ plan: it dry-runs by default and places an order only on an explicit confirm. Th
 The portfolio, goals and amounts in the repo are a **fictional investor** — the demo and the tests
 run on them.
 
+**Live demo:** [finance.rahulnainala.com](https://finance.rahulnainala.com) — read-only, on the
+fictional portfolio. Hosted free on Vercel: the frontend proxies `/api` to the FastAPI backend
+running as a serverless function on SQLite; simulations there use the in-process Monte Carlo (the
+C++ engine runs in the Docker stack).
+
 > Informational only — not licensed financial advice. Simulation outputs are estimates based on
 > user-specified assumptions, not predictions.
 

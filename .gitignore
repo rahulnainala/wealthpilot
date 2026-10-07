@@ -50,3 +50,6 @@ docs/knowledge/portfolio/
 # --- Vercel CLI (project link + local OIDC token) ---
 .vercel/
 .env*.local
+
+# --- Local DB dumps (real data) ---
+backups/
