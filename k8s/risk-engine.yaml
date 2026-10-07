@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: risk-engine
+  namespace: wealthpilot
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: risk-engine }
+  template:
+    metadata:
+      labels: { app: risk-engine }
+    spec:
+      containers:
+        - name: risk-engine
+          image: wealthpilot/risk-engine:latest
+          env:
+            - { name: RISK_ENGINE_PORT, value: "50051" }
+          ports:
+            - containerPort: 50051
+          resources:
+            requests: { cpu: "250m", memory: "128Mi" }
+            limits: { cpu: "2", memory: "512Mi" }
+---
+# ClusterIP only — internal to the cluster, never exposed via the Ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: risk-engine
+  namespace: wealthpilot
+spec:
+  type: ClusterIP
+  selector: { app: risk-engine }
+  ports:
+    - port: 50051
+      targetPort: 50051

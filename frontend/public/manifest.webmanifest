@@ -1,0 +1,17 @@
+{
+  "name": "WealthPilot",
+  "short_name": "WealthPilot",
+  "description": "Your portfolio flight deck — live risk, goals, and Pilot.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

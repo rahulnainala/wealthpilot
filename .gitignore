@@ -1,0 +1,48 @@
+# --- Node / Frontend ---
+node_modules/
+.next/
+out/
+frontend/.env*.local
+*.tsbuildinfo
+coverage/
+
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# --- C++ / Risk Engine ---
+risk-engine/build/
+risk-engine/cmake-build-*/
+*.o
+*.obj
+
+# --- Env / secrets ---
+.env
+.env.local
+!.env.example
+*.pem
+*.key
+
+# --- OS / Editor ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Docker ---
+*.log
+
+# clangd index cache
+risk-engine/.cache/
+.cache/
+compile_commands.json
+
+# --- Personal knowledge (your own plan; read by the AI, never committed) ---
+docs/knowledge/portfolio/

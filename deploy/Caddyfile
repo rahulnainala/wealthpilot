@@ -1,0 +1,27 @@
+# WealthPilot reverse proxy (Phase 41) — auto-HTTPS via Let's Encrypt.
+# Same-origin: API + health + ws-ticker go to the backend, everything else to
+# the Next.js frontend. Set your domain + email below.
+
+finance.rahulnainala.com {
+	encode zstd gzip
+
+	# Backend API, health, and the ticker WebSocket.
+	@backend path /api/* /healthz /ws/*
+	reverse_proxy @backend backend:8000
+
+	# Everything else: the Next.js app.
+	reverse_proxy frontend:3000
+
+	# Basic hardening headers.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Optional: redirect the apex/www as needed.
+# www.finance.rahulnainala.com {
+# 	redir https://finance.rahulnainala.com{uri}
+# }

@@ -1,0 +1,18 @@
+# Public read-only demo on the fictional fixture portfolio. Use with the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+# DEMO_MODE forces mock Kite + mock market data, drops every key and refuses
+# writes (see backend/app/config.py and app/main.py), so no root .env is needed.
+
+services:
+  backend:
+    environment:
+      DEMO_MODE: "true"
+      SIMULATION_PATHS: "5000"
+    volumes: !override
+      # General finance notes only — never the gitignored personal folder.
+      - ./docs/knowledge/finance:/app/knowledge/finance:ro
+
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_DEMO_MODE: "true"

@@ -1,0 +1,72 @@
+[project]
+name = "wealthpilot-backend"
+version = "0.1.0"
+description = "WealthPilot backend — FastAPI service for portfolio audit and goal tracking"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.32,<1.0",
+    "sqlalchemy[asyncio]>=2.0,<3.0",
+    "asyncpg>=0.30,<1.0",
+    "alembic>=1.13,<2.0",
+    "pydantic>=2.9,<3.0",
+    "pydantic-settings>=2.6,<3.0",
+    "apscheduler>=3.10,<4.0",
+    "kiteconnect>=5.0,<6.0",
+    "grpcio>=1.66,<2.0",
+    "redis>=5.0,<7.0",
+    "pgvector>=0.3,<1.0",
+    "grpcio-tools>=1.66,<2.0",
+    "cryptography>=43.0,<44.0",
+    "httpx>=0.27,<1.0",
+    "pywebpush>=2.0,<3.0",
+    "fpdf2>=2.8,<3.0",
+    "pypdf>=5.0,<6.0",
+    "python-multipart>=0.0.12,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7,<1.0",
+    "mypy>=1.12,<2.0",
+    "pytest>=8.3,<9.0",
+    "pytest-asyncio>=0.24,<1.0",
+    "pytest-cov>=5.0,<6.0",
+    "aiosqlite>=0.20,<1.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations", "app/risk/proto"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+exclude = ["app/risk/proto/"]
+
+[[tool.mypy.overrides]]
+module = "app.risk.proto.*"
+ignore_errors = true
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["app/analytics"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Only package the app itself; migrations/ and tests/ are siblings that would
+# otherwise make setuptools' flat-layout auto-discovery ambiguous.
+[tool.setuptools.packages.find]
+include = ["app*"]

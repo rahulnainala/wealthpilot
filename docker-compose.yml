@@ -1,0 +1,125 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wealthpilot
+      POSTGRES_PASSWORD: wealthpilot
+      POSTGRES_DB: wealthpilot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wealthpilot -d wealthpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  risk-engine:
+    build:
+      context: ./risk-engine
+    restart: unless-stopped
+    environment:
+      RISK_ENGINE_PORT: "50051"
+    expose:
+      - "50051"
+    healthcheck:
+      # TCP probe: the gRPC server accepts connections once it's serving.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/50051"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - default
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wealthpilot:wealthpilot@postgres:5432/wealthpilot
+      CACHE_BACKEND: postgres
+      # AI (docs/AI_ROADMAP.md): cloud key and/or the 3070 box's Ollama.
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      OLLAMA_URL: "${OLLAMA_URL:-}"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1:8b}"
+      # Web Push (Phase 15): generate once; empty = push disabled.
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-}"
+      # App login (Phase 40): empty = auth disabled (local); set to gate the app.
+      APP_PASSWORD: "${APP_PASSWORD:-}"
+      RISK_ENGINE_HOST: risk-engine
+      RISK_ENGINE_PORT: "50051"
+      # Use the real C++ risk engine over gRPC (mock portfolio + real Monte Carlo).
+      USE_MOCK_RISK_ENGINE: "false"
+      # Kite Connect: set these in a gitignored root .env to use live Zerodha data.
+      # Defaults keep the app in mock mode when .env is absent.
+      USE_MOCK_KITE: "${USE_MOCK_KITE:-true}"
+      KITE_API_KEY: "${KITE_API_KEY:-mock-api-key}"
+      KITE_API_SECRET: "${KITE_API_SECRET:-mock-api-secret}"
+      KITE_REDIRECT_URL: "${KITE_REDIRECT_URL:-http://localhost:3001/auth/kite/callback}"
+      FERNET_KEY: "${FERNET_KEY:-}"
+      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:3001}"
+      # Market data (decoupled from Kite): "mock" fixtures or "indianapi" free API.
+      MARKET_DATA_PROVIDER: "${MARKET_DATA_PROVIDER:-mock}"
+      MARKET_DATA_BASE_URL: "${MARKET_DATA_BASE_URL:-http://65.0.104.9}"
+    volumes:
+      # RAG corpus: drop finance/portfolio notes here; ingested nightly.
+      - ./docs/knowledge:/app/knowledge:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      risk-engine:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Training-pair generator (start: docker compose --profile train up -d traingen)
+  # Survives docker/daemon restarts; exits cleanly once the target is reached.
+  traingen:
+    profiles: ["train"]
+    build:
+      context: ./backend
+    restart: unless-stopped
+    entrypoint: ["python", "scripts/generate_training.py"]
+    command: ["--target", "1000", "--concurrency", "3", "--model", "qwen2.5:7b"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wealthpilot:wealthpilot@postgres:5432/wealthpilot
+      CACHE_BACKEND: postgres
+      OLLAMA_URL: "${OLLAMA_URL:-}"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-deepseek-r1:14b}"
+      RISK_ENGINE_HOST: risk-engine
+      RISK_ENGINE_PORT: "50051"
+      USE_MOCK_RISK_ENGINE: "false"
+      USE_MOCK_KITE: "${USE_MOCK_KITE:-true}"
+      MARKET_DATA_PROVIDER: "${MARKET_DATA_PROVIDER:-mock}"
+      AUTO_CREATE_TABLES: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      risk-engine:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: wealthpilot_network

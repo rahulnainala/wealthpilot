@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: wealthpilot
+data:
+  USE_MOCK_KITE: "true"
+  USE_MOCK_RISK_ENGINE: "false"
+  AUTO_CREATE_TABLES: "false"
+  ENABLE_SCHEDULER: "true"
+  RISK_ENGINE_HOST: "risk-engine"
+  RISK_ENGINE_PORT: "50051"
+  SIMULATION_PATHS: "10000"
+  FRONTEND_ORIGIN: "https://wealthpilot.example.com"
+---
+# Replace the placeholder values before applying. In real clusters, source these
+# from a sealed secret / external secrets operator rather than committing them.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secrets
+  namespace: wealthpilot
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql+asyncpg://wealthpilot:wealthpilot@postgres:5432/wealthpilot"
+  FERNET_KEY: "REPLACE_WITH_FERNET_KEY"
+  KITE_API_KEY: "REPLACE_ME"
+  KITE_API_SECRET: "REPLACE_ME"

@@ -1,0 +1,36 @@
+# Exposes only the frontend and backend. The risk-engine has no Ingress rule and
+# stays internal to the cluster.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wealthpilot
+  namespace: wealthpilot
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - wealthpilot.example.com
+        - api.wealthpilot.example.com
+      secretName: wealthpilot-tls
+  rules:
+    - host: wealthpilot.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
+    - host: api.wealthpilot.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000

@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package wealthpilot.risk;
+
+// Internal-only gRPC service consumed exclusively by the Python backend.
+// Handles the CPU-bound simulation work that doesn't belong in the request path
+// of the web API.
+service RiskEngine {
+  rpc Health(HealthRequest) returns (HealthResponse);
+
+  // Monte Carlo probability that a goal reaches its target value.
+  rpc SimulateGoalProbability(GoalSimRequest) returns (GoalSimResponse);
+
+  // Historical VaR/CVaR of a portfolio and each bucket's risk contribution.
+  rpc ComputePortfolioRisk(PortfolioRiskRequest) returns (PortfolioRiskResponse);
+
+  // Monte Carlo projection of the whole portfolio value forward, month by month.
+  rpc SimulatePortfolioProjection(PortfolioProjectionRequest)
+      returns (PortfolioProjectionResponse);
+
+  // Correlation-based diversification & concentration analysis.
+  rpc ComputeDiversification(DiversificationRequest)
+      returns (DiversificationResponse);
+
+  // Accumulation + retirement drawdown simulated on one continuous path.
+  rpc SimulateRetirementPlan(RetirementPlanRequest)
+      returns (RetirementPlanResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}
+
+// One allocation sleeve of a goal (a bucket's money + its return assumptions).
+message GoalSleeve {
+  string bucket = 1;
+  double value = 2;                     // current rupee value in this sleeve
+  double annual_return_mean = 3;        // decimal, e.g. 0.11 for 11%
+  double annual_return_volatility = 4;  // decimal, e.g. 0.16 for 16%
+}
+
+message GoalSimRequest {
+  repeated GoalSleeve sleeves = 1;
+  double monthly_contribution = 2;      // split across sleeves pro-rata
+  int32 months_remaining = 3;
+  double target_value = 4;
+  int32 num_paths = 5;                  // <= 0 -> default (10,000)
+  uint64 seed = 6;                      // 0 -> nondeterministic
+  double initial_shock = 7;             // <= 0: one-time market shock at t=0
+                                        // (beta-scaled by each sleeve's volatility)
+}
+
+message GoalSimResponse {
+  double probability_of_success = 1;    // fraction of paths reaching target
+  double median_ending_value = 2;
+  double p10_value = 3;
+  double p90_value = 4;
+}
+
+// A bucket's current value and its historical periodic return series.
+message BucketRisk {
+  string bucket = 1;
+  double value = 2;
+  repeated double returns = 3;
+}
+
+message PortfolioRiskRequest {
+  repeated BucketRisk buckets = 1;
+  double confidence = 2;                // e.g. 0.95
+  double periods_per_year = 3;          // return-series frequency; <= 0 -> 252 (daily)
+}
+
+message RiskContribution {
+  string bucket = 1;
+  double contribution = 2;              // component contribution to CVaR
+}
+
+message PortfolioRiskResponse {
+  double var = 1;                       // Value at Risk (rupees, positive loss)
+  double cvar = 2;                      // Conditional VaR (rupees, positive loss)
+  repeated RiskContribution contributions = 3;
+  double annual_volatility = 4;         // annualized portfolio vol (decimal, e.g. 0.14)
+  double max_drawdown = 5;              // worst peak-to-trough over the window (decimal)
+}
+
+message PortfolioProjectionRequest {
+  repeated GoalSleeve sleeves = 1;      // per-bucket value + return assumptions
+  double monthly_contribution = 2;
+  int32 months = 3;
+  int32 num_paths = 4;                  // <= 0 -> default
+  uint64 seed = 5;                      // 0 -> nondeterministic
+}
+
+message ProjectionPoint {
+  int32 month = 1;
+  double p10 = 2;
+  double median = 3;
+  double p90 = 4;
+}
+
+message PortfolioProjectionResponse {
+  repeated ProjectionPoint points = 1;  // one per month, 1..months
+}
+
+message RetirementPlanRequest {
+  repeated GoalSleeve sleeves = 1;
+  // Per-month contribution during accumulation. Empty -> monthly_contribution
+  // every month; shorter than the phase -> the last value extends. This is what
+  // models a SIP stepping up as other goals complete and free their money.
+  repeated double contribution_schedule = 2;
+  double monthly_contribution = 3;        // fallback when the schedule is empty
+  int32 accumulation_months = 4;
+  double target_value = 5;                // nominal corpus wanted at retirement
+  // Per-month withdrawal during drawdown, nominal (caller bakes in inflation).
+  repeated double withdrawal_schedule = 6;
+  int32 drawdown_months = 7;
+  int32 num_paths = 8;                    // <= 0 -> default
+  uint64 seed = 9;                        // 0 -> nondeterministic
+}
+
+message RetirementPlanResponse {
+  double probability_of_success = 1;      // corpus >= target at retirement
+  double median_corpus = 2;
+  double p10_corpus = 3;
+  double p90_corpus = 4;
+  double depletion_probability = 5;       // ran dry before the drawdown ended
+  double median_depletion_month = 6;      // among depleting paths; -1 if none
+  double median_terminal_value = 7;       // left at the end of drawdown
+  repeated ProjectionPoint bands = 8;     // yearly, spanning both phases
+}
+
+message DiversificationAsset {
+  string label = 1;
+  double weight = 2;              // value share (need not be normalised)
+  repeated double returns = 3;    // periodic returns
+}
+
+message DiversificationRequest {
+  repeated DiversificationAsset assets = 1;
+}
+
+message CorrelatedPair {
+  string label_a = 1;
+  string label_b = 2;
+  double correlation = 3;
+}
+
+message DiversificationResponse {
+  double average_correlation = 1;    // weighted mean pairwise correlation
+  double diversification_ratio = 2;  // weighted avg vol / portfolio vol
+  double effective_holdings = 3;     // 1 / sum(weight_i^2)
+  int32 holdings = 4;
+  repeated CorrelatedPair top_pairs = 5;
+}
